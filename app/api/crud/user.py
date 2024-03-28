@@ -33,8 +33,6 @@ def update_user(*, session: Session, update: UpdateUserRequest, model: UserModel
     for var, value in update.model_dump().items():
         if var == "hashed_password":
             value = get_password_hash(update.password.get_secret_value())
-        print(value)
-        print(var)
         setattr(model, var, value) if value else None
     session.add(model)
     session.commit()

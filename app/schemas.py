@@ -17,7 +17,7 @@ class TokenPayload(BaseModel):
 
 class User(BaseModel):
     email: EmailStr
-    name: str
+    username: str
     token: str
     bio: Optional[str] = None
     image: Optional[str] = None
@@ -25,7 +25,7 @@ class User(BaseModel):
 
 class NewUserRequest(BaseModel):
     email: EmailStr = Field(example="test@example.com")
-    name: str
+    username: str
     password: SecretStr
 
 
@@ -40,6 +40,7 @@ class LoginUserRequest(BaseModel):
 
 class UpdateUserRequest(BaseModel):
     email: Optional[EmailStr] = Field(default=None, example="test@example.com")
-    name: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[SecretStr] = None
     bio: Optional[str] = None
     image: Optional[str] = None

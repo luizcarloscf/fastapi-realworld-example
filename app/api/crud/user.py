@@ -19,7 +19,7 @@ def get_users(*, session: Session, skip: int = 0, limit: int = 100):
 
 def create_user(*, session: Session, user: NewUserRequest):
     db_user = UserModel(
-        name=user.name,
+        username=user.username,
         email=user.email,
         hashed_password=get_password_hash(user.password.get_secret_value()),
     )
@@ -31,8 +31,9 @@ def create_user(*, session: Session, user: NewUserRequest):
 
 def update_user(*, session: Session, update: UpdateUserRequest, model: UserModel):
     for var, value in update.model_dump().items():
-        if var == "hashed_password":
+        if var == "password" and value is not None:
             value = get_password_hash(update.password.get_secret_value())
+            setattr(model, "hashed_password", value)
         setattr(model, var, value) if value else None
     session.add(model)
     session.commit()

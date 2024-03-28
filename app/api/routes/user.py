@@ -68,7 +68,7 @@ async def login_user(
     token = create_access_token(subject=instance.id)
     return UserResponse(
         user=User(
-            name=instance.name,
+            username=instance.username,
             email=instance.email,
             image=instance.image,
             bio=instance.bio,
@@ -89,7 +89,7 @@ async def get_user(
 ) -> UserResponse:
     return UserResponse(
         user=User(
-            name=current_user.name,
+            username=current_user.username,
             email=current_user.email,
             image=current_user.image,
             bio=current_user.bio,
@@ -119,7 +119,7 @@ async def update_current_user(
     current_user = crud.update_user(session=session, update=user, model=current_user)
     return UserResponse(
         user=User(
-            name=current_user.name,
+            username=current_user.username,
             email=current_user.email,
             image=current_user.image,
             bio=current_user.bio,

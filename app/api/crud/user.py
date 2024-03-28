@@ -34,6 +34,7 @@ def update_user(*, session: Session, update: UpdateUserRequest, model: UserModel
         if var == "password" and value is not None:
             value = get_password_hash(update.password.get_secret_value())
             setattr(model, "hashed_password", value)
+            continue
         setattr(model, var, value) if value else None
     session.add(model)
     session.commit()

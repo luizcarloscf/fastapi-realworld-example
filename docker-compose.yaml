@@ -8,6 +8,7 @@ services:
       POSTGRES_DB: test
     ports:
       - "5432:5432"
+
   pgadmin:
     image: dpage/pgadmin4
     restart: always
@@ -18,3 +19,52 @@ services:
       - "5050:80"
     depends_on:
       - postgres
+
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    command: [ "--config=/etc/otel-collector.yml" ]
+    volumes:
+      - ./etc/shared/otel-collector.yml:/etc/otel-collector.yml
+    ports:
+      - "1888:1888"   # pprof extension
+      - "8888:8888"   # Prometheus metrics exposed by the collector
+      - "8889:8889"   # Prometheus exporter metrics
+      - "13133:13133" # health_check extension
+      - "4317:4317"   # OTLP gRPC receiver
+      - "55679:55679" # zpages extension
+
+  tempo:
+    image: grafana/tempo:latest
+    command: [ "-config.file=/etc/tempo.yml" ]
+    volumes:
+      - ./etc/shared/tempo.yml:/etc/tempo.yml
+      # - ./tempo-data:/tmp/tempo
+    ports:
+      - "14268"  # jaeger ingest
+      - "3200"   # tempo
+      - "55680"  # otlp grpc
+      - "55681"  # otlp http
+      - "9411"   # zipkin
+
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - --config.file=/etc/prometheus.yml
+      - --web.enable-remote-write-receiver
+      - --enable-feature=exemplar-storage
+    volumes:
+      - ./etc/shared/prometheus.yml:/etc/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - ./etc/shared/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true  
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor traceQLStreaming metricsSummary
+    ports:
+      - "3000:3000"

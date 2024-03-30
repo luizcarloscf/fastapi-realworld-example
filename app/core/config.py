@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ALGORITHM: Literal["HS256"] = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
+    OTLP_GRPC_ENDPOINT: AnyUrl
 
 
 SETTINGS = Settings()

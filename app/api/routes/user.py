@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import APIRouter, Body, HTTPException
+from opentelemetry import trace
 
 import app.api.crud.user as crud
 from app.api.deps import SessionDep, TokenDep, CurrentUser
@@ -15,6 +16,7 @@ from app.schemas import (
 
 router = APIRouter()
 log = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 @router.post(
@@ -23,11 +25,11 @@ log = logging.getLogger(__name__)
     response_model=UserResponse,
     summary="Register new user",
 )
+@tracer.start_as_current_span("POST /users add_user")
 async def add_user(
     session: SessionDep,
     user: NewUserRequest = Body(..., embed=True),
 ) -> UserResponse:
-    log.info("Started POST /users")
     maybe_user = crud.get_user_by_email(session=session, email=user.email)
     if maybe_user:
         raise HTTPException(
@@ -50,6 +52,7 @@ async def add_user(
     response_model=UserResponse,
     summary="Login with email/password",
 )
+@tracer.start_as_current_span("POST /users/login login_user")
 async def login_user(
     session: SessionDep,
     user: LoginUserRequest = Body(..., embed=True, alias="user"),
@@ -83,6 +86,7 @@ async def login_user(
     response_model=UserResponse,
     summary="Get current logged user",
 )
+@tracer.start_as_current_span("GET /user get_user")
 async def get_user(
     token: TokenDep,
     current_user: CurrentUser,
@@ -104,6 +108,7 @@ async def get_user(
     response_model=UserResponse,
     summary="Update current logged user",
 )
+@tracer.start_as_current_span("PUT /users update_current_user")
 async def update_current_user(
     session: SessionDep,
     current_user: CurrentUser,

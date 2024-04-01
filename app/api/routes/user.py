@@ -15,7 +15,7 @@ from app.schemas import (
 )
 
 router = APIRouter()
-log = logging.getLogger(__name__)
+log = logging.getLogger("app.api.users")
 tracer = trace.get_tracer(__name__)
 
 
@@ -32,6 +32,7 @@ async def add_user(
 ) -> UserResponse:
     maybe_user = crud.get_user_by_email(session=session, email=user.email)
     if maybe_user:
+        log.error("User with email already registered.")
         raise HTTPException(
             status_code=400,
             detail="User with email already registered",

@@ -1,37 +1,64 @@
+extensions:
+  health_check:
+    endpoint: "0.0.0.0:13133"
 receivers:
   otlp:
     protocols:
       grpc:
+        endpoint: "0.0.0.0:4317"
       http:
+        endpoint: "0.0.0.0:4318"
         cors:
           allowed_origins:
-            - "http://*"
-            - "https://*"
-
+          - "http://*"
+          - "https://*"
 processors:
-  batch:
-    timeout: 100ms
-
+  batch: {}
 exporters:
   debug:
     verbosity: detailed
-
   otlp:
-    endpoint: tempo:4317
+    endpoint: "jaeger:4317"
     tls:
       insecure: true
-
-  prometheus:
-    endpoint: "0.0.0.0:8889"
-
+  otlphttp/prometheus:
+    endpoint: "http://prometheus:9090/api/v1/otlp"
+    tls:
+      insecure: true
+  opensearch:
+    logs_index: otel
+    http:
+      endpoint: "http://opensearch:9200"
+      tls:
+        insecure: true
 service:
-  pipelines:
+  extensions:
+  - health_check
+  telemetry:
     metrics:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [debug, prometheus]
-
+      address: "0.0.0.0:8888"
+  pipelines:
     traces:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [debug, otlp]
+      receivers:
+      - otlp
+      processors:
+      - batch
+      exporters:
+      - debug
+      - otlp
+    metrics:
+      receivers:
+      - otlp
+      processors:
+      - batch
+      exporters:
+      - debug
+      - otlphttp/prometheus
+    logs:
+      receivers:
+      - otlp
+      processors:
+      - batch
+      exporters:
+      - debug
+      - opensearch

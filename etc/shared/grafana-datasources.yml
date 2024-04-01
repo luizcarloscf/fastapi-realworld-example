@@ -1,30 +1,36 @@
 apiVersion: 1
 
 datasources:
-- name: Prometheus
-  type: prometheus
-  uid: prometheus
-  access: proxy
-  orgId: 1
-  url: http://prometheus:9090
-  basicAuth: false
-  isDefault: false
-  version: 1
-  editable: false
-  jsonData:
-    httpMethod: GET
-- name: Tempo
-  type: tempo
-  access: proxy
-  orgId: 1
-  url: http://tempo:3200
-  basicAuth: false
+- editable: true
   isDefault: true
-  version: 1
-  editable: false
-  apiVersion: 1
-  uid: tempo
   jsonData:
-    httpMethod: GET
-    serviceMap:
-      datasourceUid: prometheus
+    exemplarTraceIdDestinations:
+    - datasourceUid: webstore-traces
+      name: trace_id
+    - name: trace_id
+      url: http://localhost:8080/jaeger/ui/trace/$${__value.raw}
+      urlDisplayLabel: View in Jaeger UI
+  name: Prometheus
+  type: prometheus
+  uid: webstore-metrics
+  url: http://prometheus:9090
+- editable: true
+  isDefault: false
+  name: Jaeger
+  type: jaeger
+  uid: webstore-traces
+  url: http://jaeger:16686/jaeger/ui
+- editable: true
+  isDefault: false
+  name: OpenSearch
+  type: grafana-opensearch-datasource
+  url: http://opensearch:9200
+  access: proxy
+  jsonData:
+    database: otel
+    flavor: opensearch
+    logLevelField: severity
+    logMessageField: body
+    pplEnabled: true
+    timeField: observedTimestamp
+    version: 2.12.0

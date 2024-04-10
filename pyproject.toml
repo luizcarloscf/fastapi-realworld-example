@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "app"
+name = "conduit"
 version = "0.1.0"
 description = "Backend implementation of Realworld Application (Medium Clone) with FastAPI"
 authors = ["Luiz Carlos Cosmi Filho <luizcarloscosmifilho@gmail.com>"]

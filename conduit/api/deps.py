@@ -1,7 +1,9 @@
-from typing import Annotated
+from typing import Annotated, Optional
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.openapi.models import HTTPBearer as HTTPBearerModel
+from fastapi.security.http import HTTPBase
+from fastapi.security.utils import get_authorization_scheme_param
 from jose import JWTError, jwt
 from pydantic import ValidationError
 from starlette.requests import Request
@@ -13,23 +15,42 @@ from conduit.models import UserModel
 from conduit.schemas.token import TokenPayload
 
 
-class JWTBearer(HTTPBearer):
-    def __init__(self, auto_error: bool = True):
-        super().__init__(auto_error=auto_error)
+class HTTPToken(HTTPBase):
 
-    async def __call__(self, request: Request):
-        credentials: HTTPAuthorizationCredentials = await super().__call__(request)
-        if credentials:
-            if not credentials.scheme == "Bearer":
+    def __init__(
+        self,
+        *,
+        bearerFormat: Optional[str] = None,
+        scheme_name: Optional[str] = None,
+        description: Optional[str] = None,
+        auto_error: bool = True,
+    ):
+        self.model = HTTPBearerModel(bearerFormat=bearerFormat, description=description)
+        self.scheme_name = scheme_name or self.__class__.__name__
+        self.auto_error = auto_error
+
+    async def __call__(self, request: Request) -> Optional[str]:
+        authorization = request.headers.get("Authorization")
+        scheme, credentials = get_authorization_scheme_param(authorization)
+        if not (authorization and scheme and credentials):
+            if self.auto_error:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail="Not authenticated"
+                )
+            else:
+                return None
+        if scheme.lower() != "token":
+            if self.auto_error:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Invalid authentication scheme.",
+                    detail="Invalid authentication credentials",
                 )
-            return credentials.credentials
-        raise HTTPException(status_code=403, detail="Invalid authorization code.")
+            else:
+                return None
+        return credentials
 
 
-bearer = JWTBearer(auto_error=False)
+bearer = HTTPToken(auto_error=True)
 
 SessionDep = Annotated[SessionLocal, Depends(get_db)]
 TokenDep = Annotated[str, Depends(bearer)]

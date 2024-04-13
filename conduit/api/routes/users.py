@@ -39,7 +39,7 @@ async def add_user(
         msg = "User with email already registered."
         log.error(msg=msg)
         raise HTTPException(status_code=400, detail="msg")
-    instance = crud.create_user(session=session, user=user)
+    instance = crud.create_user(session=session, request=user)
     instance_view = UserModelView.model_validate(instance)
     token = create_access_token(subject=instance_view.id)
     return UserResponse(user=User(token=token, **instance_view.model_dump()))
@@ -107,6 +107,6 @@ async def update_current_user(
             msg = "User with this email already exists."
             log.error(msg=msg)
             raise HTTPException(status_code=409, detail=msg)
-    current_user = crud.update_user(session=session, update=user, model=current_user)
+    current_user = crud.update_user(session=session, request=user, user=current_user)
     instance_view = UserModelView.model_validate(current_user)
     return UserResponse(user=User(**instance_view.model_dump(), token=token))

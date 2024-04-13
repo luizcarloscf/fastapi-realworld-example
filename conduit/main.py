@@ -21,6 +21,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 from conduit.api.routes.users import router as users_router
+from conduit.api.routes.articles import router as articles_router
 from conduit.core.config import SETTINGS
 from conduit.core.database import ENGINE, Base
 
@@ -35,6 +36,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(users_router)
+app.include_router(articles_router)
 
 resource = Resource.create(
     attributes={

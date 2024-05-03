@@ -8,7 +8,7 @@ from slugify import slugify
 from conduit import crud
 from conduit.api.deps import CurrentUserDep, SessionDep, TokenDep
 from conduit.core.security import create_access_token
-from conduit.schemas.articles import (
+from conduit.schemas.article import (
     NewArticleRequest,
     SingleArticleResponse,
     Article,

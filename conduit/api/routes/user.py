@@ -7,7 +7,7 @@ from opentelemetry import trace
 from conduit import crud
 from conduit.api.deps import CurrentUserDep, SessionDep, TokenDep
 from conduit.core.security import create_access_token
-from conduit.schemas.users import (
+from conduit.schemas.user import (
     LoginUserRequest,
     NewUserRequest,
     UpdateUserRequest,

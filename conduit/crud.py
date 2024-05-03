@@ -5,8 +5,8 @@ from slugify import slugify
 
 from conduit.core.security import get_password_hash, verify_password
 from conduit.models import UserModel, ArticleModel, CommentModel
-from conduit.schemas.users import NewUserRequest, UpdateUserRequest
-from conduit.schemas.articles import NewArticleRequest
+from conduit.schemas.user import NewUserRequest, UpdateUserRequest
+from conduit.schemas.article import NewArticleRequest
 
 
 def get_user_by_id(*, session: Session, user_id: int):

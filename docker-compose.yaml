@@ -1,4 +1,20 @@
 services:
+  conduit-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: conduit-backend
+    restart: always
+    environment:
+      ALLOWED_CORS_ORIGINS: '["http://localhost:3000"]'
+      DATABASE_URI: postgresql+psycopg_async://root:root@postgres:5432/test
+      SECRET_KEY: super-secret-key
+      OTLP_GRPC_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - otel-collector
   postgres:
     image: postgres
     container_name: postgres
@@ -62,7 +78,7 @@ services:
       - --storage.tsdb.retention.time=1d
       - --config.file=/etc/prometheus.yml
       - --enable-feature=exemplar-storage
-      - --enable-feature=otlp-write-receiver
+      - --web.enable-otlp-receiver
     volumes:
       - ./etc/shared/prometheus.yml:/etc/prometheus.yml
     ports:

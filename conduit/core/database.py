@@ -1,27 +1,35 @@
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+# from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine
+
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+# from sqlmodel.orm import DeclarativeBase, sessionmaker
 
 from conduit.core.config import SETTINGS
 
-ENGINE = create_engine(
+ENGINE = create_async_engine(
     url=str(SETTINGS.DATABASE_URI),
-    # connect_args={
-    #     "check_same_thread": False,
-    # },
+    pool_size=10,
+    max_overflow=20,
+    pool_recycle=300,
 )
 
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
+
+class Base(DeclarativeBase):
+    pass
+
+
+AsyncSessionLocal = sessionmaker(
     bind=ENGINE,
+    class_=AsyncSession,
+    expire_on_commit=False,
 )
-Base = declarative_base()
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()

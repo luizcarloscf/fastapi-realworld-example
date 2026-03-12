@@ -1,47 +1,67 @@
-from typing import Optional, Annotated
+from typing import List, Optional
 
-from datetime import datetime
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 
 
-from conduit.schemas.user import UserModelView
-from conduit.schemas.profile import Profile
+from conduit.schemas.profile import ProfileData
+from conduit.schemas.utils import DatetimeISOFormat
 
 
-class ArticleModelView(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    slug: str
+class ArticleRegister(BaseModel):
     title: str
     description: str
     body: str
-    author_id: int
-    created_at: datetime
-    updated_at: datetime
-    author: UserModelView
+    tag_list: List[str]
 
-
-class NewArticleRequest(BaseModel):
-    title: str
-    description: str
-    body: str
-
-
-class Article(BaseModel):
     model_config = ConfigDict(
-        from_attributes=True, populate_by_name=True, alias_generator=to_camel
+        alias_generator=to_camel,
+        populate_by_name=True,
     )
 
-    author: Profile
+
+class ArticleRegisterRequest(BaseModel):
+    article: ArticleRegister
+
+
+class ArticleUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    body: Optional[str] = None
+
+
+class ArticleUpdateRequest(BaseModel):
+    article: ArticleUpdate
+
+
+class ArticleData(BaseModel):
+
+    author: ProfileData
     title: str
     slug: str
     body: str
     description: str
-    created_at: datetime
-    updated_at: datetime
+    created_at: DatetimeISOFormat
+    updated_at: DatetimeISOFormat
+    tag_list: List[str]
+    favorited: bool | None
+    favorites_count: int
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
 
 
-class SingleArticleResponse(BaseModel):
-    article: Article
+class ArticleResponse(BaseModel):
+    article: ArticleData
+
+
+class ArticlesResponse(BaseModel):
+    articles: List[ArticleData]
+    articles_count: int
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )

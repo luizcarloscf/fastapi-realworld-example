@@ -1,6 +1,6 @@
 from typing import List, Literal
 
-from pydantic import AnyUrl
+from pydantic import AnyUrl, HttpUrl, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,12 +11,12 @@ class Settings(BaseSettings):
     )
     DOMAIN: str = "localhost"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
-    ALLOWED_CORS_ORIGINS: List[AnyUrl]
-    DATABASE_URI: AnyUrl
+    ALLOWED_CORS_ORIGINS: List[HttpUrl]
+    DATABASE_URI: str
     SECRET_KEY: str
     ALGORITHM: Literal["HS256"] = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
-    OTLP_GRPC_ENDPOINT: AnyUrl
+    OTLP_GRPC_ENDPOINT: HttpUrl
 
 
 SETTINGS = Settings()

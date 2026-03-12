@@ -13,7 +13,7 @@ uvicorn = "^0.29.0"
 pydantic-settings = "^2.2.1"
 sqlalchemy = "^2.0.29"
 passlib = "^1.7.4"
-psycopg2 = "^2.9.9"
+psycopg = "^3.2.3"
 python-jose = "^3.3.0"
 opentelemetry-sdk = "^1.24.0"
 opentelemetry-api = "^1.24.0"
@@ -23,6 +23,8 @@ opentelemetry-instrumentation-sqlalchemy = "^0.45b0"
 opentelemetry-exporter-prometheus = "^0.45b0"
 opentelemetry-exporter-otlp = "^1.24.0"
 python-slugify = "^8.0.4"
+setuptools = "<=81.0.0"
+sqlmodel = "^0.0.37"
 
 [build-system]
 requires = ["poetry-core"]

@@ -3,12 +3,12 @@ from typing import Optional
 from pydantic import BaseModel
 
 
-class Profile(BaseModel):
+class ProfileData(BaseModel):
     username: str
     bio: Optional[str]
     image: Optional[str]
-    following: bool = False
+    following: Optional[bool] = None
 
 
 class ProfileResponse(BaseModel):
-    profile: Profile
+    profile: ProfileData

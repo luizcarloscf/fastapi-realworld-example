@@ -1,62 +1,64 @@
-from typing import Annotated, Optional
+from typing import Annotated, Any, Optional
 
 from fastapi import Depends, HTTPException, status
-from fastapi.openapi.models import HTTPBearer as HTTPBearerModel
-from fastapi.security.http import HTTPBase
-from fastapi.security.utils import get_authorization_scheme_param
+from fastapi.security import APIKeyHeader
 from jose import JWTError, jwt
 from pydantic import ValidationError
+from sqlmodel.ext.asyncio.session import AsyncSession
 from starlette.requests import Request
 
-from conduit import crud
+# from conduit import crud
 from conduit.core.config import SETTINGS
-from conduit.core.database import SessionLocal, get_db
-from conduit.models import UserModel
+from conduit.core.database import get_db
+from conduit.models import User
 from conduit.schemas.token import TokenPayload
 
+SessionDB = Annotated[AsyncSession, Depends(get_db)]
 
-class HTTPToken(HTTPBase):
 
-    def __init__(
-        self,
-        *,
-        bearerFormat: Optional[str] = None,
-        scheme_name: Optional[str] = None,
-        description: Optional[str] = None,
-        auto_error: bool = True,
-    ):
-        self.model = HTTPBearerModel(bearerFormat=bearerFormat, description=description)
-        self.scheme_name = scheme_name or self.__class__.__name__
-        self.auto_error = auto_error
+class HTTPTokenHeader(APIKeyHeader):
+    def __init__(self, raise_error: bool, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self.raise_error = raise_error
 
-    async def __call__(self, request: Request) -> Optional[str]:
-        authorization = request.headers.get("Authorization")
-        scheme, credentials = get_authorization_scheme_param(authorization)
-        if not (authorization and scheme and credentials):
-            if self.auto_error:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN, detail="Not authenticated"
-                )
-            else:
+    async def __call__(self, request: Request) -> str | None:
+        api_key = request.headers.get(self.model.name)
+        if not api_key:
+            if not self.raise_error:
                 return None
-        if scheme.lower() != "token":
-            if self.auto_error:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Invalid authentication credentials",
-                )
-            else:
-                return None
-        return credentials
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Missing authorization credentials",
+            )
+
+        try:
+            token_prefix, token = api_key.split(" ")
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid token schema",
+            )
+
+        if token_prefix.lower() != "token":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid token schema",
+            )
+
+        return token
 
 
-bearer = HTTPToken(auto_error=True)
+bearer = HTTPTokenHeader(raise_error=True, name="Authorization")
+bearer_optional = HTTPTokenHeader(raise_error=False, name="Authorization")
 
-SessionDep = Annotated[SessionLocal, Depends(get_db)]
-TokenDep = Annotated[str, Depends(bearer)]
+Token = Annotated[str, Depends(bearer)]
+TokenOptional = Annotated[Optional[str], Depends(bearer_optional)]
 
 
-def get_current_user(session: SessionDep, token: TokenDep) -> UserModel:
+async def get_current_user(
+    session: SessionDB,
+    token: Token,
+) -> User:
     try:
         payload = jwt.decode(
             token=token,
@@ -69,13 +71,39 @@ def get_current_user(session: SessionDep, token: TokenDep) -> UserModel:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid credentials or expired token.",
         ) from ex
-    instance = crud.get_user_by_id(session=session, user_id=token_data.sub)
-    if not instance:
+    user_db = await session.get(User, token_data.sub)
+    if not user_db:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Not found user.",
         )
-    return instance
+    return user_db
 
 
-CurrentUserDep = Annotated[UserModel, Depends(get_current_user)]
+async def get_current_user_optional(
+    session: SessionDB,
+    token: TokenOptional,
+) -> Optional[User]:
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(
+            token=token,
+            key=SETTINGS.SECRET_KEY,
+            algorithms=[SETTINGS.ALGORITHM],
+        )
+        token_data = TokenPayload(**payload)
+    except (JWTError, ValidationError):
+        return None
+    user_db = await session.get(User, token_data.sub)
+    return user_db
+
+
+CurrentUser = Annotated[
+    User,
+    Depends(get_current_user),
+]
+CurrentOptionalUser = Annotated[
+    Optional[User],
+    Depends(get_current_user_optional),
+]

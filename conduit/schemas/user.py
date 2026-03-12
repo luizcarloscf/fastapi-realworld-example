@@ -1,19 +1,8 @@
 from typing import Optional
-from pydantic import BaseModel, EmailStr, SecretStr, ConfigDict
+from pydantic import BaseModel, EmailStr, SecretStr
 
 
-class UserModelView(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    email: EmailStr
-    username: str
-    image: Optional[str]
-    bio: Optional[str]
-    hashed_password: str
-
-
-class User(BaseModel):
+class UserData(BaseModel):
     email: EmailStr
     username: str
     token: str
@@ -22,23 +11,35 @@ class User(BaseModel):
 
 
 class UserResponse(BaseModel):
-    user: User
+    user: UserData
 
 
-class NewUserRequest(BaseModel):
+class UserRegistration(BaseModel):
     email: EmailStr
     username: str
     password: SecretStr
 
 
-class LoginUserRequest(BaseModel):
+class UserRegistrationRequest(BaseModel):
+    user: UserRegistration
+
+
+class UserLogin(BaseModel):
     email: EmailStr
     password: SecretStr
 
 
-class UpdateUserRequest(BaseModel):
+class UserLoginRequest(BaseModel):
+    user: UserLogin
+
+
+class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     username: Optional[str] = None
     password: Optional[SecretStr] = None
     bio: Optional[str] = None
     image: Optional[str] = None
+
+
+class UserUpdateRequest(BaseModel):
+    user: UserUpdate

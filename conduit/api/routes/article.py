@@ -39,9 +39,37 @@ async def list_articles(
     limit: int = Query(20, ge=1),
     offset: int = Query(0, ge=0),
 ) -> ArticlesResponse:
+    response = await crud_article.get_articles_with_filters(
+        session=session,
+        current_user_id=current_user.id if current_user else None,
+        tag=tag,
+        author=author,
+        favorited=favorited,
+        limit=limit,
+        offset=offset,
+    )
     return ArticlesResponse(
-        articles=[],
-        articles_count=0,
+        articles=[
+            ArticleData(
+                slug=article_db.slug,
+                title=article_db.title,
+                description=article_db.description,
+                body=article_db.body,
+                author=ProfileData(
+                    username=user_db.username,
+                    bio=user_db.bio,
+                    image=user_db.image,
+                    following=following,
+                ),
+                tag_list=sorted(tags_string.split(",")) if tags_string else [],
+                favorited=favorited,
+                favorites_count=favorites_count,
+                created_at=article_db.created_at,
+                updated_at=article_db.updated_at,
+            )
+            for article_db, user_db, following, favorites_count, favorited, tags_string in response
+        ],
+        articles_count=len(response),
     )
 
 
@@ -76,7 +104,7 @@ async def feed_articles(
                     image=user_db.image,
                     following=following,
                 ),
-                tag_list=tags_string.split(",") if tags_string else [],
+                tag_list=sorted(tags_string.split(",")) if tags_string else [],
                 favorited=favorited,
                 favorites_count=favorites_count,
                 created_at=article_db.created_at,
@@ -333,7 +361,7 @@ async def favorite_article(
                 image=author_db.image,
                 following=following,
             ),
-            tag_list=tags_string.split(",") if tags_string else [],
+            tag_list=sorted(tags_string.split(",")) if tags_string else [],
             favorited=True,
             favorites_count=favorites_count + 1,
             created_at=article_db.created_at,
@@ -395,7 +423,7 @@ async def unfavorite_article(
                 image=user_db.image,
                 following=following,
             ),
-            tag_list=tags_string.split(",") if tags_string else [],
+            tag_list=sorted(tags_string.split(",")) if tags_string else [],
             favorited=False,
             favorites_count=(
                 favorites_count - 1 if favorited else favorites_count

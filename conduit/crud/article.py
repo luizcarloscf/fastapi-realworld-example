@@ -121,3 +121,50 @@ async def get_article_author_tags_favorite(
     )
     result = await session.exec(query)
     return result.one_or_none()
+
+
+async def get_article_from_followed_authors(
+    session: AsyncSession,
+    current_user_id: Optional[int],
+    limit: int,
+    offset: int,
+) -> Optional[Tuple[Article, User, bool, int, bool, str]]:
+    if current_user_id is None:
+        current_user_id = 0
+    query = (
+        select(
+            Article,
+            User,
+            exists()
+            .where(
+                (Follower.follower_id == current_user_id)
+                & (Follower.following_id == Article.author_id)
+            )
+            .label("following"),
+            select(func.count(Favorite.article_id))
+            .where(Favorite.article_id == Article.id)
+            .scalar_subquery()
+            .label("favorites_count"),
+            exists()
+            .where(
+                (Favorite.user_id == current_user_id)
+                & (Favorite.article_id == Article.id)
+            )
+            .label("favorited"),
+            func.string_agg(Tag.name, ",").label("tags"),
+        )
+        .join(User, Article.author_id == User.id)
+        .join(ArticleTag, Article.id == ArticleTag.article_id, isouter=True)
+        .join(Tag, Tag.id == ArticleTag.tag_id, isouter=True)
+        .filter(
+            exists().where(
+                (Follower.follower_id == current_user_id)
+                & (Follower.following_id == Article.author_id)
+            )
+        )
+        .group_by(Article, User)
+        .limit(limit)
+        .offset(offset)
+    )
+    result = await session.exec(query)
+    return result.all()

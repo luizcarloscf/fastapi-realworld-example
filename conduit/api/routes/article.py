@@ -7,7 +7,6 @@ from starlette import status
 import conduit.crud.article as crud_article
 import conduit.crud.favorite as crud_favorite
 import conduit.crud.tag as crud_tag
-import conduit.crud.comment as crud_comment
 from conduit.api.deps import (
     CurrentOptionalUser,
     CurrentUser,
@@ -58,9 +57,34 @@ async def feed_articles(
     limit: int = Query(20, ge=1),
     offset: int = Query(0, ge=0),
 ) -> ArticlesResponse:
+    response = await crud_article.get_article_from_followed_authors(
+        session=session,
+        current_user_id=current_user.id,
+        limit=limit,
+        offset=offset,
+    )
     return ArticlesResponse(
-        articles=[],
-        articles_count=0,
+        articles=[
+            ArticleData(
+                slug=article_db.slug,
+                title=article_db.title,
+                description=article_db.description,
+                body=article_db.body,
+                author=ProfileData(
+                    username=user_db.username,
+                    bio=user_db.bio,
+                    image=user_db.image,
+                    following=following,
+                ),
+                tag_list=tags_string.split(",") if tags_string else [],
+                favorited=favorited,
+                favorites_count=favorites_count,
+                created_at=article_db.created_at,
+                updated_at=article_db.updated_at,
+            )
+            for article_db, user_db, following, favorites_count, favorited, tags_string in response
+        ],
+        articles_count=len(response),
     )
 
 

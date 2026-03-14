@@ -127,45 +127,41 @@ async def get_article(
     session: SessionDB,
     current_user: CurrentOptionalUser,
 ) -> ArticleResponse:
-    response = await crud_article.get_article_and_user_by_slug(
+    response = await crud_article.get_article_author_tags_favorite(
         session=session,
-        slug=slug,
+        article_slug=slug,
+        current_user_id=current_user.id if current_user else 0,
     )
     if not response:
         raise HTTPException(
             status_code=404,
-            detail="Article not found.",
+            detail=f"Article with slug '{slug}' not found.",
         )
-    article, author_user = response
-    tags = await crud_tag.get_tags_by_article_id(
-        session=session,
-        article_id=article.id,
-    )
-
-    favorites = await crud_favorite.get_favorites_by_article_id(
-        session=session,
-        article_id=article.id,
-    )
-    favorited = False
-    if current_user:
-        favorited = any(f.user_id == current_user.id for f in favorites)
-
+    (
+        article_db,
+        author_db,
+        following,
+        favorites_count,
+        favorited,
+        tags_string,
+    ) = response
     return ArticleResponse(
         article=ArticleData(
-            slug=article.slug,
-            title=article.title,
-            description=article.description,
-            body=article.body,
+            slug=article_db.slug,
+            title=article_db.title,
+            description=article_db.description,
+            body=article_db.body,
             author=ProfileData(
-                username=author_user.username,
-                bio=author_user.bio,
-                image=author_user.image,
+                username=author_db.username,
+                bio=author_db.bio,
+                image=author_db.image,
+                following=following,
             ),
-            tag_list=[t.name for t in tags],
+            tag_list=tags_string.split(",") if tags_string else [],
             favorited=favorited,
-            favorites_count=len(favorites),
-            created_at=article.created_at,
-            updated_at=article.updated_at,
+            favorites_count=favorites_count,
+            created_at=article_db.created_at,
+            updated_at=article_db.updated_at,
         )
     )
 
@@ -182,38 +178,34 @@ async def update_article(
     current_user: CurrentUser,
     article_update_request: ArticleUpdateRequest,
 ) -> ArticleResponse:
-    article_update = article_update_request.article
-    article_db = await crud_article.get_article_by_slug(
+    response = await crud_article.get_article_author_tags_favorite(
         session=session,
-        slug=slug,
+        article_slug=slug,
+        current_user_id=current_user.id,
     )
-    if not article_db:
+    if not response:
         raise HTTPException(
             status_code=404,
-            detail="Article not found.",
+            detail=f"Article with slug '{slug}' not found.",
         )
+    (
+        article_db,
+        author_db,
+        following,
+        favorites_count,
+        favorited,
+        tags_string,
+    ) = response
     if article_db.author_id != current_user.id:
         raise HTTPException(
             status_code=403,
-            detail="Not authorized to update this article.",
+            detail=f"User '{current_user.username}' is not the author of the article with slug '{slug}'.",
         )
-    tags = await crud_tag.get_tags_by_article_id(
-        session=session,
-        article_id=article_db.id,
-    )
-
-    favorites = await crud_favorite.get_favorites_by_article_id(
-        session=session,
-        article_id=article_db.id,
-    )
-    favorited = any(f.user_id == current_user.id for f in favorites)
-
     article_db = await crud_article.update_article(
         session=session,
         article=article_db,
-        request=article_update,
+        request=article_update_request.article,
     )
-
     return ArticleResponse(
         article=ArticleData(
             slug=article_db.slug,
@@ -221,13 +213,14 @@ async def update_article(
             description=article_db.description,
             body=article_db.body,
             author=ProfileData(
-                username=current_user.username,
-                bio=current_user.bio,
-                image=current_user.image,
+                username=author_db.username,
+                bio=author_db.bio,
+                image=author_db.image,
+                following=following,
             ),
-            tag_list=[t.name for t in tags],
+            tag_list=tags_string.split(",") if tags_string else [],
             favorited=favorited,
-            favorites_count=len(favorites),
+            favorites_count=favorites_count,
             created_at=article_db.created_at,
             updated_at=article_db.updated_at,
         )
@@ -252,25 +245,13 @@ async def delete_article(
     if not db_article:
         raise HTTPException(
             status_code=404,
-            detail="Article not found.",
+            detail=f"Article with slug '{slug}' not found.",
         )
     if db_article.author_id != current_user.id:
         raise HTTPException(
             status_code=403,
-            detail="Not authorized to delete this article.",
+            detail=f"User '{current_user.username}' is not the author of the article with slug '{slug}'.",
         )
-    await crud_favorite.delete_favorites_by_article_id(
-        session=session,
-        article_id=db_article.id,
-    )
-    await crud_tag.delete_tags_for_article(
-        session=session,
-        article_id=db_article.id,
-    )
-    await crud_comment.delete_comments_by_article_id(
-        session=session,
-        article_id=db_article.id,
-    )
     await crud_article.delete_article(
         session=session,
         article=db_article,
@@ -288,32 +269,34 @@ async def favorite_article(
     session: SessionDB,
     current_user: CurrentUser,
 ) -> ArticleResponse:
-    response = await crud_article.get_article_and_user_by_slug(
+    response = await crud_article.get_article_author_tags_favorite(
         session=session,
-        slug=slug,
+        article_slug=slug,
+        current_user_id=current_user.id,
     )
-    if not response:
+    if response is None:
         raise HTTPException(
             status_code=404,
-            detail="Article not found.",
+            detail=f"Article with slug '{slug}' not found.",
         )
-    article_db, user_db = response
+    (
+        article_db,
+        author_db,
+        following,
+        favorites_count,
+        favorited,
+        tags_string,
+    ) = response
+    if favorited:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Article with slug '{slug}' already favorited by user '{current_user.username}'.",
+        )
     await crud_favorite.favorite_article(
         session=session,
         user=current_user,
         article=article_db,
     )
-
-    tags = await crud_tag.get_tags_by_article_id(
-        session=session,
-        article_id=article_db.id,
-    )
-
-    favorites = await crud_favorite.get_favorites_by_article_id(
-        session=session,
-        article_id=article_db.id,
-    )
-
     return ArticleResponse(
         article=ArticleData(
             slug=article_db.slug,
@@ -321,13 +304,14 @@ async def favorite_article(
             description=article_db.description,
             body=article_db.body,
             author=ProfileData(
-                username=user_db.username,
-                bio=user_db.bio,
-                image=user_db.image,
+                username=author_db.username,
+                bio=author_db.bio,
+                image=author_db.image,
+                following=following,
             ),
-            tag_list=[t.name for t in tags],
+            tag_list=tags_string.split(",") if tags_string else [],
             favorited=True,
-            favorites_count=len(favorites),
+            favorites_count=favorites_count + 1,
             created_at=article_db.created_at,
             updated_at=article_db.updated_at,
         ),
@@ -345,32 +329,34 @@ async def unfavorite_article(
     session: SessionDB,
     current_user: CurrentUser,
 ) -> ArticleResponse:
-    response = await crud_article.get_article_and_user_by_slug(
+    response = await crud_article.get_article_author_tags_favorite(
         session=session,
-        slug=slug,
+        article_slug=slug,
+        current_user_id=current_user.id,
     )
-    if not response:
+    if response is None:
         raise HTTPException(
             status_code=404,
-            detail="Article not found.",
+            detail=f"Article with slug '{slug}' not found.",
         )
+    (
+        article_db,
+        user_db,
+        following,
+        favorites_count,
+        favorited,
+        tags_string,
+    ) = response
 
-    article_db, user_db = response
-
+    if not favorited:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Article with slug '{slug}' not favorited by user '{current_user.username}'.",
+        )
     await crud_favorite.unfavorite_article(
         session=session,
         user=current_user,
         article=article_db,
-    )
-
-    tags = await crud_tag.get_tags_by_article_id(
-        session=session,
-        article_id=article_db.id,
-    )
-
-    favorites = await crud_favorite.get_favorites_by_article_id(
-        session=session,
-        article_id=article_db.id,
     )
 
     return ArticleResponse(
@@ -383,10 +369,13 @@ async def unfavorite_article(
                 username=user_db.username,
                 bio=user_db.bio,
                 image=user_db.image,
+                following=following,
             ),
-            tag_list=[t.name for t in tags],
+            tag_list=tags_string.split(",") if tags_string else [],
             favorited=False,
-            favorites_count=len(favorites),
+            favorites_count=(
+                favorites_count - 1 if favorited else favorites_count
+            ),
             created_at=article_db.created_at,
             updated_at=article_db.updated_at,
         ),

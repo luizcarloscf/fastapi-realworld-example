@@ -47,11 +47,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(users_router)
-app.include_router(articles_router)
-app.include_router(comments_router)
-app.include_router(profiles_router)
-app.include_router(tags_router)
+app.include_router(prefix="/api", router=users_router)
+app.include_router(prefix="/api", router=articles_router)
+app.include_router(prefix="/api", router=comments_router)
+app.include_router(prefix="/api", router=profiles_router)
+app.include_router(prefix="/api", router=tags_router)
 
 
 @app.on_event("startup")

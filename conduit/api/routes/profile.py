@@ -1,10 +1,9 @@
-import logging
-
 from fastapi import APIRouter, HTTPException
+from starlette import status
 
 import conduit.crud.follower as crud_follower
 import conduit.crud.user as crud_user
-from conduit.api.deps import SessionDB, CurrentUser, CurrentOptionalUser
+from conduit.api.deps import CurrentOptionalUser, CurrentUser, SessionDB
 from conduit.schemas.profile import ProfileData, ProfileResponse
 
 router = APIRouter()
@@ -15,6 +14,7 @@ router = APIRouter()
     tags=["profiles"],
     response_model=ProfileResponse,
     summary="Get a user profile.",
+    status_code=status.HTTP_200_OK,
 )
 async def get_profile(
     username: str,
@@ -27,7 +27,7 @@ async def get_profile(
     )
     if not user:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Profile not found.",
         )
     if current_user:
@@ -53,6 +53,7 @@ async def get_profile(
     tags=["profiles"],
     response_model=ProfileResponse,
     summary="Follow a user.",
+    status_code=status.HTTP_200_OK,
 )
 async def follow_user(
     username: str,
@@ -65,12 +66,12 @@ async def follow_user(
     )
     if not user:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Profile not found.",
         )
     if user.id == current_user.id:
         raise HTTPException(
-            status_code=422,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Cannot follow yourself.",
         )
     await crud_follower.follow_user(
@@ -93,6 +94,7 @@ async def follow_user(
     tags=["profiles"],
     response_model=ProfileResponse,
     summary="Unfollow a user.",
+    status_code=status.HTTP_200_OK,
 )
 async def unfollow_user(
     username: str,
@@ -105,12 +107,12 @@ async def unfollow_user(
     )
     if not user:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Profile not found.",
         )
     if user.id == current_user.id:
         raise HTTPException(
-            status_code=422,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Cannot unfollow yourself.",
         )
     await crud_follower.unfollow_user(

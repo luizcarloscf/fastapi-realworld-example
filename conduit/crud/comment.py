@@ -47,7 +47,7 @@ async def get_comment_by_id(
         Comment.id == comment_id,
     )
     result = await session.exec(query)
-    return result.one()
+    return result.one_or_none()
 
 
 async def delete_comment(

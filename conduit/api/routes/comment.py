@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+from starlette import status
 
 import conduit.crud.comment as crud_comment
 import conduit.crud.article as crud_article
@@ -20,6 +21,7 @@ router = APIRouter()
     tags=["comments"],
     response_model=CommentResponse,
     summary="Add comment to article.",
+    status_code=status.HTTP_201_CREATED,
 )
 async def add_comment(
     slug: str,
@@ -27,15 +29,23 @@ async def add_comment(
     current_user: CurrentUser,
     comment: CommentRegisterRequest,
 ) -> CommentResponse:
+
+    if not comment.comment.body:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Comment body cannot be empty.",
+        )
+
     article = await crud_article.get_article_by_slug(
         session=session,
         slug=slug,
     )
     if not article:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Article not found.",
         )
+
     instance = await crud_comment.create_comment(
         session=session,
         comment_registration=comment.comment,
@@ -62,6 +72,7 @@ async def add_comment(
     tags=["comments"],
     response_model=CommentsResponse,
     summary="Get comments for article.",
+    status_code=status.HTTP_200_OK,
 )
 async def get_comments(
     slug: str,
@@ -73,7 +84,10 @@ async def get_comments(
         slug=slug,
     )
     if not article:
-        raise HTTPException(status_code=404, detail="Article not found.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Article not found.",
+        )
     comments = await crud_comment.get_comments_and_users_by_article_id(
         session=session,
         article_id=article.id,
@@ -100,6 +114,7 @@ async def get_comments(
     path="/articles/{slug}/comments/{comment_id}",
     tags=["comments"],
     summary="Delete comment.",
+    status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_comment(
     slug: str,
@@ -113,7 +128,7 @@ async def delete_comment(
     )
     if not article:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Article not found.",
         )
 
@@ -123,12 +138,12 @@ async def delete_comment(
     )
     if not comment or comment.article_id != article.id:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Comment not found.",
         )
     if comment.author_id != current_user.id:
         raise HTTPException(
-            status_code=403,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to delete this comment.",
         )
 

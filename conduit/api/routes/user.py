@@ -2,6 +2,7 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Body, HTTPException
+from starlette import status
 
 from conduit.crud import user as user_crud
 from conduit.api.deps import CurrentUser, SessionDB, Token
@@ -11,13 +12,9 @@ from conduit.schemas.user import (
     UserRegistrationRequest,
     UserResponse,
     UserData,
-    UserLogin,
     UserLoginRequest,
     UserUpdateRequest,
 )
-from conduit.models import User
-from conduit.core.security import get_password_hash, verify_password
-
 
 router = APIRouter()
 log = logging.getLogger("conduit.api.users")
@@ -28,6 +25,7 @@ log = logging.getLogger("conduit.api.users")
     tags=["users"],
     response_model=UserResponse,
     summary="Register new user",
+    status_code=status.HTTP_201_CREATED,
 )
 async def add_user(
     session: SessionDB,
@@ -40,7 +38,7 @@ async def add_user(
     )
     if maybe_user:
         raise HTTPException(
-            status_code=409,
+            status_code=status.HTTP_409_CONFLICT,
             detail="User with this email or username already exists.",
         )
 
@@ -66,6 +64,7 @@ async def add_user(
     tags=["users"],
     response_model=UserResponse,
     summary="Login with email/password",
+    status_code=status.HTTP_200_OK,
 )
 async def login_user(
     session: SessionDB,
@@ -78,7 +77,7 @@ async def login_user(
     )
     if not user_db:
         raise HTTPException(
-            status_code=401,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid password or e-mail, could not login.",
         )
 
@@ -98,6 +97,7 @@ async def login_user(
     tags=["users"],
     response_model=UserResponse,
     summary="Get current logged user",
+    status_code=status.HTTP_200_OK,
 )
 async def get_user(
     token: Token,
@@ -119,6 +119,7 @@ async def get_user(
     tags=["users"],
     response_model=UserResponse,
     summary="Update current logged user",
+    status_code=status.HTTP_200_OK,
 )
 async def update_current_user(
     session: SessionDB,
@@ -133,7 +134,7 @@ async def update_current_user(
         )
         if existing_user and existing_user.id != current_user.id:
             raise HTTPException(
-                status_code=409,
+                status_code=status.HTTP_409_CONFLICT,
                 detail="User with this email already exists.",
             )
 
@@ -144,7 +145,7 @@ async def update_current_user(
         )
         if existing_user and existing_user.id != current_user.id:
             raise HTTPException(
-                status_code=409,
+                status_code=status.HTTP_409_CONFLICT,
                 detail="User with this username already exists.",
             )
 

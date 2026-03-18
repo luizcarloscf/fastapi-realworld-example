@@ -1,3 +1,4 @@
+from secrets import token_urlsafe
 from typing import Optional, Tuple
 
 from slugify import slugify
@@ -15,6 +16,12 @@ from conduit.schemas.article import (
     ArticleRegister,
     ArticleUpdate,
 )
+
+
+def new_slug(title: str) -> str:
+    slug = slugify(text=title, max_length=24, lowercase=True)
+    unique_code = token_urlsafe(16)
+    return f"{slug}-{unique_code.lower()}"
 
 
 async def get_article_by_slug(
@@ -48,7 +55,7 @@ async def create_article(
 ) -> Article:
 
     instance = Article(
-        slug=slugify(request.title),
+        slug=new_slug(request.title),
         title=request.title,
         description=request.description,
         body=request.body,
@@ -63,13 +70,9 @@ async def update_article(
     session: AsyncSession,
     article: Article,
     request: ArticleUpdate,
-) -> None:
-    if request.title is not None:
-        article.title = request.title
-    if request.description is not None:
-        article.description = request.description
-    if request.body is not None:
-        article.body = request.body
+) -> Article:
+    article_data = request.model_dump(exclude_unset=True)
+    article.sqlmodel_update(article_data)
     session.add(article)
     await session.commit()
     await session.refresh(article)
@@ -165,9 +168,30 @@ async def get_article_from_followed_authors(
         .group_by(Article, User)
         .limit(limit)
         .offset(offset)
+        .order_by(Article.created_at.desc())
     )
     result = await session.exec(query)
     return result.all()
+
+
+async def count_article_from_followed_authors(
+    session: AsyncSession,
+    current_user_id: Optional[int],
+) -> int:
+    if current_user_id is None:
+        current_user_id = 0
+    query = (
+        select(func.count(Article.id))
+        .select_from(Article)
+        .filter(
+            exists().where(
+                (Follower.follower_id == current_user_id)
+                & (Follower.following_id == Article.author_id)
+            )
+        )
+    )
+    result = await session.exec(query)
+    return int(result.one())
 
 
 async def get_articles_with_filters(
@@ -220,6 +244,27 @@ async def get_articles_with_filters(
                 & (Favorite.article_id == Article.id),
             )
         )
-    query = query.limit(limit).offset(offset)
+    query = (
+        query.limit(limit).offset(offset).order_by(Article.created_at.desc())
+    )
     result = await session.exec(query)
     return result.all()
+
+
+async def count_articles_with_filters(
+    session: AsyncSession,
+    tag: Optional[str],
+    author: Optional[str],
+    favorited: Optional[str],
+) -> int:
+    query = select(func.count(Article.id)).select_from(Article)
+    if tag:
+        query = query.join(ArticleTag).join(Tag).filter(Tag.name == tag)
+    if author:
+        query = query.join(User).filter(User.username == author)
+    if favorited:
+        query = (
+            query.join(Favorite).join(User).filter(User.username == favorited)
+        )
+    result = await session.exec(query)
+    return int(result.one())

@@ -63,6 +63,7 @@ async def delete_tags_for_article(
     article_id: int,
 ) -> None:
     query = delete(ArticleTag).where(
-        ArticleTag.article_id == article_id,
+        (ArticleTag.article_id == article_id),
     )
     await session.exec(query)
+    await session.commit()

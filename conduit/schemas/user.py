@@ -4,7 +4,7 @@ from pydantic import BaseModel, EmailStr, SecretStr, Field, field_validator
 
 class UserData(BaseModel):
     email: EmailStr
-    username: str = Field(..., min_length=6, max_length=30)
+    username: str
     token: str
     bio: Optional[str] = None
     image: Optional[str] = None
@@ -16,8 +16,8 @@ class UserResponse(BaseModel):
 
 class UserRegistration(BaseModel):
     email: EmailStr
-    username: str = Field(..., min_length=6, max_length=30)
-    password: SecretStr = Field(..., min_length=6, max_length=30)
+    username: str = Field(..., min_length=4, max_length=30)
+    password: SecretStr = Field(..., min_length=4, max_length=30)
 
 
 class UserRegistrationRequest(BaseModel):
@@ -35,7 +35,7 @@ class UserLoginRequest(BaseModel):
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
-    username: Optional[str] = Field(None, min_length=6, max_length=30)
+    username: Optional[str] = Field(None, min_length=4, max_length=30)
     password: Optional[SecretStr] = Field(None, min_length=6, max_length=30)
     bio: Optional[str] = None
     image: Optional[str] = None

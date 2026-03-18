@@ -1,13 +1,13 @@
 from typing import Annotated, Any, Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException
 from fastapi.security import APIKeyHeader
 from jose import JWTError, jwt
 from pydantic import ValidationError
 from sqlmodel.ext.asyncio.session import AsyncSession
 from starlette.requests import Request
+from starlette import status
 
-# from conduit import crud
 from conduit.core.config import SETTINGS
 from conduit.core.database import get_db
 from conduit.models import User
@@ -27,7 +27,7 @@ class HTTPTokenHeader(APIKeyHeader):
             if not self.raise_error:
                 return None
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
+                status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Missing authorization credentials",
             )
 
@@ -35,13 +35,13 @@ class HTTPTokenHeader(APIKeyHeader):
             token_prefix, token = api_key.split(" ")
         except ValueError:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
+                status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token schema",
             )
 
         if token_prefix.lower() != "token":
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
+                status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token schema",
             )
 
@@ -68,7 +68,7 @@ async def get_current_user(
         token_data = TokenPayload(**payload)
     except (JWTError, ValidationError) as ex:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials or expired token.",
         ) from ex
     user_db = await session.get(User, token_data.sub)

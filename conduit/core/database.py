@@ -1,10 +1,7 @@
-# from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.orm import sessionmaker
 
 from sqlmodel.ext.asyncio.session import AsyncSession
-
-# from sqlmodel.orm import DeclarativeBase, sessionmaker
 
 from conduit.core.config import SETTINGS
 
@@ -14,10 +11,6 @@ ENGINE = create_async_engine(
     max_overflow=20,
     pool_recycle=300,
 )
-
-
-class Base(DeclarativeBase):
-    pass
 
 
 AsyncSessionLocal = sessionmaker(

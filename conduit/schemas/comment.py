@@ -1,5 +1,4 @@
-from typing import List
-from datetime import datetime
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
@@ -9,7 +8,7 @@ from conduit.schemas.utils import DatetimeISOFormat
 
 
 class CommentRegister(BaseModel):
-    body: str
+    body: Optional[str] = None
 
 
 class CommentRegisterRequest(BaseModel):

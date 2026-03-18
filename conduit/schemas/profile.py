@@ -7,7 +7,7 @@ class ProfileData(BaseModel):
     username: str
     bio: Optional[str]
     image: Optional[str]
-    following: Optional[bool] = None
+    following: bool = False
 
 
 class ProfileResponse(BaseModel):

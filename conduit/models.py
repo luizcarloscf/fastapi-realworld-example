@@ -1,11 +1,10 @@
-from typing import List
 from datetime import datetime, timezone
 
-from sqlmodel import Field, SQLModel, Relationship
+from sqlmodel import Field, SQLModel
 
 
 def _utcnow():
-    return datetime.now(timezone.utc).replace(microsecond=0)
+    return datetime.now(timezone.utc)
 
 
 class Follower(SQLModel, table=True):
@@ -37,34 +36,23 @@ class ArticleTag(SQLModel, table=True):
 
 
 class User(SQLModel, table=True):
-    id: int | None = Field(nullable=False, unique=True, primary_key=True)
+    id: int | None = Field(
+        nullable=False,
+        unique=True,
+        primary_key=True,
+        sa_column_kwargs={"autoincrement": True},
+    )
     username: str = Field(index=True, unique=True)
     email: str = Field(index=True, unique=True)
     image: str | None = Field(default=None)
     bio: str | None = Field(default=None)
     hashed_password: str = Field(nullable=False)
     created_at: datetime = Field(nullable=False, default_factory=_utcnow)
-    updated_at: datetime = Field(nullable=False, default_factory=_utcnow)
-
-    # articles: List["Article"] = Relationship(back_populates="author")
-    # comments: List["Comment"] = Relationship(back_populates="author")
-    # favorites: List["Article"] = Relationship(back_populates="favorited_by", link_model=Favorite)
-    # following: List["User"] = Relationship(
-    #     back_populates="followers",
-    #     link_model=Follower,
-    #     sa_relationship_kwargs={
-    #         "primaryjoin": "User.id==Follower.follower_id",
-    #         "secondaryjoin": "User.id==Follower.following_id",
-    #     },
-    # )
-    # followers: List["User"] = Relationship(
-    #     back_populates="following",
-    #     link_model=Follower,
-    #     sa_relationship_kwargs={
-    #         "primaryjoin": "User.id==Follower.following_id",
-    #         "secondaryjoin": "User.id==Follower.follower_id",
-    #     },
-    # )
+    updated_at: datetime = Field(
+        nullable=False,
+        default_factory=_utcnow,
+        sa_column_kwargs={"onupdate": _utcnow},
+    )
 
 
 class Article(SQLModel, table=True):
@@ -75,19 +63,16 @@ class Article(SQLModel, table=True):
     body: str = Field(nullable=False)
     author_id: int = Field(foreign_key="user.id", nullable=False)
     created_at: datetime = Field(nullable=False, default_factory=_utcnow)
-    updated_at: datetime = Field(nullable=False, default_factory=_utcnow)
-
-    # author: "User" = Relationship(back_populates="articles")
-    # tags: List["Tag"] = Relationship(back_populates="articles", link_model=ArticleTag)
-    # favorited_by: List["User"] = Relationship(back_populates="favorites", link_model=Favorite)
-    # comments: List["Comment"] = Relationship(back_populates="article")
+    updated_at: datetime = Field(
+        nullable=False,
+        default_factory=_utcnow,
+        sa_column_kwargs={"onupdate": _utcnow},
+    )
 
 
 class Tag(SQLModel, table=True):
     id: int | None = Field(nullable=False, unique=True, primary_key=True)
     name: str = Field(unique=True, nullable=False)
-
-    # articles: List["Article"] = Relationship(back_populates="tags", link_model=ArticleTag)
 
 
 class Comment(SQLModel, table=True):
@@ -104,7 +89,8 @@ class Comment(SQLModel, table=True):
     )
     body: str = Field(nullable=False)
     created_at: datetime = Field(nullable=False, default_factory=_utcnow)
-    updated_at: datetime = Field(nullable=False, default_factory=_utcnow)
-
-    # author: "User" = Relationship(back_populates="comments")
-    # article: "Article" = Relationship(back_populates="comments")
+    updated_at: datetime = Field(
+        nullable=False,
+        default_factory=_utcnow,
+        sa_column_kwargs={"onupdate": _utcnow},
+    )

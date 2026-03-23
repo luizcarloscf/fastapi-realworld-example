@@ -1,9 +1,14 @@
-from fastapi import APIRouter, HTTPException
-from starlette import status
+import logging
 
-import conduit.crud.comment as crud_comment
-import conduit.crud.article as crud_article
-from conduit.api.deps import SessionDB, CurrentUser, CurrentOptionalUser
+from fastapi import APIRouter, status
+
+import conduit.services.comment as comment_service
+import conduit.services.article as article_service
+from conduit.api.dependencies import (
+    SessionDB,
+    CurrentUser,
+    CurrentOptionalUser,
+)
 from conduit.schemas.comment import (
     CommentRegisterRequest,
     CommentData,
@@ -11,9 +16,14 @@ from conduit.schemas.comment import (
     CommentsResponse,
 )
 from conduit.schemas.profile import ProfileData
-
+from conduit.exceptions import (
+    CommentNotFoundException,
+    CommentNotAuthorException,
+    ArticleNotFoundException,
+)
 
 router = APIRouter()
+log = logging.getLogger("conduit.api.comments")
 
 
 @router.post(
@@ -27,42 +37,33 @@ async def add_comment(
     slug: str,
     session: SessionDB,
     current_user: CurrentUser,
-    comment: CommentRegisterRequest,
+    comment_register: CommentRegisterRequest,
 ) -> CommentResponse:
-
-    if not comment.comment.body:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Comment body cannot be empty.",
-        )
-
-    article = await crud_article.get_article_by_slug(
+    comment = comment_register.comment
+    article = await article_service.get_article_by_slug(
         session=session,
         slug=slug,
     )
     if not article:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Article not found.",
-        )
+        raise ArticleNotFoundException()
 
-    instance = await crud_comment.create_comment(
+    comment_db = await comment_service.create_comment(
         session=session,
-        comment_registration=comment.comment,
-        article=article,
-        user=current_user,
+        comment_body=comment.body,
+        article_id=article.id,
+        user_id=current_user.id,
     )
     return CommentResponse(
         comment=CommentData(
-            id=instance.id,
-            body=instance.body,
+            id=comment_db.id,
+            body=comment_db.body,
             author=ProfileData(
                 username=current_user.username,
                 bio=current_user.bio,
                 image=current_user.image,
             ),
-            created_at=instance.created_at,
-            updated_at=instance.updated_at,
+            created_at=comment_db.created_at,
+            updated_at=comment_db.updated_at,
         )
     )
 
@@ -79,33 +80,32 @@ async def get_comments(
     session: SessionDB,
     current_user: CurrentOptionalUser,
 ) -> CommentsResponse:
-    article = await crud_article.get_article_by_slug(
+    article = await article_service.get_article_by_slug(
         session=session,
         slug=slug,
     )
     if not article:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Article not found.",
-        )
-    comments = await crud_comment.get_comments_and_users_by_article_id(
+        raise ArticleNotFoundException()
+    response = await comment_service.get_comments_and_users_by_article_id(
         session=session,
         article_id=article.id,
+        current_user_id=current_user.id if current_user else None,
     )
     return CommentsResponse(
         comments=[
             CommentData(
-                id=c.id,
-                body=c.body,
+                id=comment.id,
+                body=comment.body,
                 author=ProfileData(
-                    username=u.username,
-                    bio=u.bio,
-                    image=u.image,
+                    username=user.username,
+                    bio=user.bio,
+                    image=user.image,
+                    following=following,
                 ),
-                created_at=c.created_at,
-                updated_at=c.updated_at,
+                created_at=comment.created_at,
+                updated_at=comment.updated_at,
             )
-            for c, u in comments
+            for comment, user, following in response
         ]
     )
 
@@ -122,32 +122,23 @@ async def delete_comment(
     session: SessionDB,
     current_user: CurrentUser,
 ) -> None:
-    article = await crud_article.get_article_by_slug(
+    article = await article_service.get_article_by_slug(
         session=session,
         slug=slug,
     )
     if not article:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Article not found.",
-        )
+        raise ArticleNotFoundException()
 
-    comment = await crud_comment.get_comment_by_id(
+    comment = await comment_service.get_comment_by_id(
         session=session,
         comment_id=comment_id,
     )
     if not comment or comment.article_id != article.id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Comment not found.",
-        )
+        raise CommentNotFoundException()
     if comment.author_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to delete this comment.",
-        )
+        raise CommentNotAuthorException()
 
-    await crud_comment.delete_comment(
+    await comment_service.delete_comment_by_id(
         session=session,
-        comment=comment,
+        comment_id=comment_id,
     )

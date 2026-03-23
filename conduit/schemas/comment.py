@@ -1,14 +1,17 @@
-from typing import List, Optional
+from typing import List, Annotated
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, WrapValidator
 from pydantic.alias_generators import to_camel
 
 from conduit.schemas.profile import ProfileData
-from conduit.schemas.utils import DatetimeISOFormat
+from conduit.schemas.utils import DatetimeISOFormat, check_not_none_if_set
 
 
 class CommentRegister(BaseModel):
-    body: Optional[str] = None
+    body: Annotated[
+        str,
+        WrapValidator(check_not_none_if_set),
+    ]
 
 
 class CommentRegisterRequest(BaseModel):

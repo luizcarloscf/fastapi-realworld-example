@@ -6,7 +6,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from conduit.models import Tag, ArticleTag
 
 
-async def get_all_tags(*, session: AsyncSession) -> List[str]:
+async def get_all_tags(
+    *,
+    session: AsyncSession,
+) -> List[str]:
     result = await session.exec(
         select(Tag),
     )
@@ -14,6 +17,7 @@ async def get_all_tags(*, session: AsyncSession) -> List[str]:
 
 
 async def get_tags_by_article_id(
+    *,
     session: AsyncSession,
     article_id: int,
 ) -> List[Tag]:
@@ -27,6 +31,7 @@ async def get_tags_by_article_id(
 
 
 async def create_tags_for_article(
+    *,
     session: AsyncSession,
     tag_names: List[str],
     article_id: int,
@@ -59,6 +64,7 @@ async def create_tags_for_article(
 
 
 async def delete_tags_for_article(
+    *,
     session: AsyncSession,
     article_id: int,
 ) -> None:

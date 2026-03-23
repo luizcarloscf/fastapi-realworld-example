@@ -1,13 +1,23 @@
-from typing import Optional
-from pydantic import BaseModel, EmailStr, SecretStr, Field, field_validator
+from typing import Annotated
+from pydantic import (
+    BaseModel,
+    EmailStr,
+    SecretStr,
+    WrapValidator,
+)
+
+from conduit.schemas.utils import (
+    check_not_none_if_set,
+    normalize_to_none,
+)
 
 
 class UserData(BaseModel):
     email: EmailStr
     username: str
     token: str
-    bio: Optional[str] = None
-    image: Optional[str] = None
+    bio: str | None = None
+    image: str | None = None
 
 
 class UserResponse(BaseModel):
@@ -15,9 +25,18 @@ class UserResponse(BaseModel):
 
 
 class UserRegistration(BaseModel):
-    email: EmailStr
-    username: str = Field(..., min_length=4, max_length=30)
-    password: SecretStr = Field(..., min_length=4, max_length=30)
+    email: Annotated[
+        EmailStr,
+        WrapValidator(check_not_none_if_set),
+    ]
+    username: Annotated[
+        str,
+        WrapValidator(check_not_none_if_set),
+    ]
+    password: Annotated[
+        SecretStr,
+        WrapValidator(check_not_none_if_set),
+    ]
 
 
 class UserRegistrationRequest(BaseModel):
@@ -25,8 +44,14 @@ class UserRegistrationRequest(BaseModel):
 
 
 class UserLogin(BaseModel):
-    email: EmailStr
-    password: SecretStr = Field(..., min_length=6, max_length=30)
+    email: Annotated[
+        EmailStr,
+        WrapValidator(check_not_none_if_set),
+    ]
+    password: Annotated[
+        SecretStr,
+        WrapValidator(check_not_none_if_set),
+    ]
 
 
 class UserLoginRequest(BaseModel):
@@ -34,25 +59,26 @@ class UserLoginRequest(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    email: Optional[EmailStr] = None
-    username: Optional[str] = Field(None, min_length=4, max_length=30)
-    password: Optional[SecretStr] = Field(None, min_length=6, max_length=30)
-    bio: Optional[str] = None
-    image: Optional[str] = None
-
-    @field_validator("username", "email", "password", mode="before")
-    @classmethod
-    def check_not_none_if_set(cls, v):
-        if v is None:
-            raise ValueError(f"Field cannot be set to null")
-        return v
-
-    @field_validator("bio", "image", mode="before")
-    @classmethod
-    def normalize_to_none(cls, v):
-        if isinstance(v, str) and len(v.strip()) == 0:
-            return None
-        return v
+    email: Annotated[
+        EmailStr | None,
+        WrapValidator(check_not_none_if_set),
+    ] = None
+    username: Annotated[
+        str | None,
+        WrapValidator(check_not_none_if_set),
+    ] = None
+    password: Annotated[
+        SecretStr | None,
+        WrapValidator(check_not_none_if_set),
+    ] = None
+    bio: Annotated[
+        str | None,
+        WrapValidator(normalize_to_none),
+    ] = None
+    image: Annotated[
+        str | None,
+        WrapValidator(normalize_to_none),
+    ] = None
 
 
 class UserUpdateRequest(BaseModel):

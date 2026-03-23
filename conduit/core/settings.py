@@ -1,6 +1,7 @@
+from functools import lru_cache
 from typing import List, Literal
 
-from pydantic import AnyUrl, HttpUrl, field_validator
+from pydantic import HttpUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,4 +20,6 @@ class Settings(BaseSettings):
     OTLP_GRPC_ENDPOINT: HttpUrl
 
 
-SETTINGS = Settings()
+@lru_cache()
+def get_settings_cached() -> Settings:
+    return Settings()

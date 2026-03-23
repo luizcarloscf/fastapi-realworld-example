@@ -1,9 +1,10 @@
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import sessionmaker
-
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from conduit.core.config import SETTINGS
+from conduit.core.settings import get_settings_cached
+
+SETTINGS = get_settings_cached()
 
 ENGINE = create_async_engine(
     url=str(SETTINGS.DATABASE_URI),

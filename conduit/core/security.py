@@ -1,31 +1,31 @@
-from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from jose import jwt
-from passlib.context import CryptContext
-
-from conduit.core.config import SETTINGS
-
-PWD_CONTEXT = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return PWD_CONTEXT.verify(plain_password, hashed_password)
+from fastapi.security import APIKeyHeader
+from starlette.requests import Request
+from conduit.exceptions import (
+    TokenMissingException,
+    TokenInvalidException,
+)
 
 
-def get_password_hash(password: str) -> str:
-    return PWD_CONTEXT.hash(password)
+class HTTPTokenHeader(APIKeyHeader):
+    def __init__(self, raise_error: bool, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self.raise_error = raise_error
 
+    async def __call__(self, request: Request) -> str | None:
+        api_key = request.headers.get(self.model.name)
+        if not api_key:
+            if not self.raise_error:
+                return None
+            raise TokenMissingException()
 
-def create_access_token(subject: str | Any) -> str:
-    access_token_expires = timedelta(
-        minutes=SETTINGS.ACCESS_TOKEN_EXPIRE_MINUTES,
-    )
-    expire = datetime.now(timezone.utc) + access_token_expires
-    to_encode = {"exp": expire, "sub": str(subject)}
-    encoded_jwt = jwt.encode(
-        claims=to_encode,
-        key=SETTINGS.SECRET_KEY,
-        algorithm=SETTINGS.ALGORITHM,
-    )
-    return encoded_jwt
+        try:
+            token_prefix, token = api_key.split(" ")
+        except ValueError as ex:
+            raise TokenInvalidException() from ex
+
+        if token_prefix.lower() != "token":
+            raise TokenInvalidException()
+
+        return token

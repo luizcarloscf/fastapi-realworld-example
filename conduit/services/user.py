@@ -1,22 +1,28 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 
-from sqlmodel import select
+from sqlmodel import select, exists
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from conduit.core.security import get_password_hash, verify_password
-from conduit.models import User
+from conduit.services.password import get_password_hash, verify_password
+from conduit.models import User, Follower
 from conduit.schemas.user import UserRegistration, UserUpdate
 
 
 async def get_user_by_id(
+    *,
     session: AsyncSession,
     user_id: int,
 ) -> Optional[User]:
-    return await session.get(User, user_id)
+    query = select(User).where(
+        User.id == user_id,
+    )
+    result = await session.exec(query)
+    return result.one_or_none()
 
 
 async def get_user_by_email(
+    *,
     session: AsyncSession,
     email: str,
 ) -> Optional[User]:
@@ -24,33 +30,32 @@ async def get_user_by_email(
         User.email == email,
     )
     result = await session.exec(query)
-    return result.first()
+    return result.one_or_none()
 
 
 async def get_user_by_username(
+    *,
     session: AsyncSession,
     username: str,
-) -> Optional[User]:
-    query = select(User).where(
+    current_user_id: int = 0,
+) -> Optional[Tuple[User, bool]]:
+    query = select(
+        User,
+        exists()
+        .where(
+            (Follower.follower_id == current_user_id)
+            & (Follower.following_id == User.id)
+        )
+        .label("following"),
+    ).where(
         User.username == username,
     )
     result = await session.exec(query)
-    return result.first()
-
-
-async def get_user_by_email_or_username(
-    session: AsyncSession,
-    email: str,
-    username: str,
-) -> Optional[User]:
-    query = select(User).where(
-        (User.email == email) | (User.username == username),
-    )
-    result = await session.exec(query)
-    return result.first()
+    return result.one_or_none()
 
 
 async def create_user(
+    *,
     session: AsyncSession,
     user_registration: UserRegistration,
 ) -> User:
@@ -67,6 +72,7 @@ async def create_user(
 
 
 async def update_user(
+    *,
     session: AsyncSession,
     user_update: UserUpdate,
     user_current: User,
@@ -83,22 +89,3 @@ async def update_user(
     await session.commit()
     await session.refresh(user_current)
     return user_current
-
-
-async def authenticate(
-    session: AsyncSession,
-    email: str,
-    password: str,
-) -> Optional[User]:
-    db_user = await get_user_by_email(
-        session=session,
-        email=email,
-    )
-    if not db_user:
-        return None
-    if not verify_password(
-        plain_password=password,
-        hashed_password=db_user.hashed_password,
-    ):
-        return None
-    return db_user

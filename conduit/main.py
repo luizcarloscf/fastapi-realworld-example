@@ -3,7 +3,7 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from opentelemetry import trace, metrics, _logs
+from opentelemetry import _logs, metrics, trace
 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
     OTLPMetricExporter,
@@ -12,8 +12,8 @@ from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
     OTLPSpanExporter,
 )
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.metrics import MeterProvider
@@ -22,42 +22,40 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-from conduit.core.config import SETTINGS
-from conduit.core.database import ENGINE
-from sqlmodel import SQLModel
-
-
-from conduit.api.routes.user import router as users_router
 from conduit.api.routes.article import router as articles_router
 from conduit.api.routes.comment import router as comments_router
+from conduit.api.routes.health import router as health_router
 from conduit.api.routes.profile import router as profiles_router
 from conduit.api.routes.tag import router as tags_router
+from conduit.api.routes.user import router as users_router
+from conduit.core.database import ENGINE
+from conduit.core.settings import get_settings_cached
+from conduit.exceptions import add_http_exception_handler
 
+settings = get_settings_cached()
 
 app = FastAPI(
     title="Conduit Backend API",
     description="Backend API for the Conduit application.",
     version="0.1.0",
+    docs_url="/",
 )
-
+add_http_exception_handler(app)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=SETTINGS.ALLOWED_CORS_ORIGINS,
+    allow_origins=[
+        str(origin).rstrip("/") for origin in settings.ALLOWED_CORS_ORIGINS
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(prefix="/api", router=health_router)
 app.include_router(prefix="/api", router=users_router)
 app.include_router(prefix="/api", router=articles_router)
 app.include_router(prefix="/api", router=comments_router)
 app.include_router(prefix="/api", router=profiles_router)
 app.include_router(prefix="/api", router=tags_router)
-
-
-@app.on_event("startup")
-async def on_startup():
-    async with ENGINE.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
 
 
 resource = Resource.create(
@@ -71,7 +69,7 @@ tracer_provider = TracerProvider(resource=resource)
 tracer_provider.add_span_processor(
     span_processor=BatchSpanProcessor(
         span_exporter=OTLPSpanExporter(
-            endpoint=str(SETTINGS.OTLP_GRPC_ENDPOINT),
+            endpoint=str(settings.OTLP_GRPC_ENDPOINT),
             insecure=True,
         ),
     ),
@@ -83,7 +81,7 @@ meter_provider = MeterProvider(
     metric_readers=[
         PeriodicExportingMetricReader(
             exporter=OTLPMetricExporter(
-                endpoint=str(SETTINGS.OTLP_GRPC_ENDPOINT),
+                endpoint=str(settings.OTLP_GRPC_ENDPOINT),
                 insecure=True,
             ),
         ),
@@ -95,7 +93,7 @@ logger_provider = LoggerProvider(resource=resource)
 logger_provider.add_log_record_processor(
     BatchLogRecordProcessor(
         exporter=OTLPLogExporter(
-            endpoint=str(SETTINGS.OTLP_GRPC_ENDPOINT),
+            endpoint=str(settings.OTLP_GRPC_ENDPOINT),
             insecure=True,
         )
     )

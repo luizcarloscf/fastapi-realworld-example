@@ -1,12 +1,21 @@
-from fastapi import APIRouter, HTTPException
-from starlette import status
+import logging
 
-import conduit.crud.follower as crud_follower
-import conduit.crud.user as crud_user
-from conduit.api.deps import CurrentOptionalUser, CurrentUser, SessionDB
+from fastapi import APIRouter, status
+
+import conduit.services.follower as follower_service
+import conduit.services.user as user_service
+from conduit.api.dependencies import CurrentOptionalUser, CurrentUser, SessionDB
+from conduit.exceptions import (
+    ProfileAlreadyFollowedException,
+    ProfileFollowYourselfException,
+    ProfileNotFollowedException,
+    ProfileNotFoundException,
+    ProfileUnfollowYourselfException,
+)
 from conduit.schemas.profile import ProfileData, ProfileResponse
 
 router = APIRouter()
+log = logging.getLogger("conduit.api.profiles")
 
 
 @router.get(
@@ -21,28 +30,19 @@ async def get_profile(
     session: SessionDB,
     current_user: CurrentOptionalUser,
 ) -> ProfileResponse:
-    user = await crud_user.get_user_by_username(
+    response = await user_service.get_user_by_username(
         session=session,
         username=username,
+        current_user_id=current_user.id if current_user else None,
     )
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Profile not found.",
-        )
-    if current_user:
-        following = await crud_follower.is_following(
-            session=session,
-            follower=current_user,
-            followed=user,
-        )
-    else:
-        following = False
+    user_db, following = response if response else (None, False)
+    if not user_db:
+        raise ProfileNotFoundException()
     return ProfileResponse(
         profile=ProfileData(
-            username=user.username,
-            bio=user.bio,
-            image=user.image,
+            username=user_db.username,
+            bio=user_db.bio,
+            image=user_db.image,
             following=following,
         )
     )
@@ -60,30 +60,28 @@ async def follow_user(
     session: SessionDB,
     current_user: CurrentUser,
 ) -> ProfileResponse:
-    user = await crud_user.get_user_by_username(
+    response = await user_service.get_user_by_username(
         session=session,
         username=username,
+        current_user_id=current_user.id,
     )
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Profile not found.",
-        )
-    if user.id == current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Cannot follow yourself.",
-        )
-    await crud_follower.follow_user(
+    user_db, following = response if response else (None, False)
+    if not user_db:
+        raise ProfileNotFoundException()
+    if user_db.id == current_user.id:
+        raise ProfileFollowYourselfException()
+    if following:
+        raise ProfileAlreadyFollowedException()
+    await follower_service.follow_user(
         session=session,
-        follower=current_user,
-        followed=user,
+        follower_id=current_user.id,  # type: ignore[arg-type]
+        followed_id=user_db.id,  # type: ignore[arg-type]
     )
     return ProfileResponse(
         profile=ProfileData(
-            username=user.username,
-            bio=user.bio,
-            image=user.image,
+            username=user_db.username,
+            bio=user_db.bio,
+            image=user_db.image,
             following=True,
         )
     )
@@ -101,30 +99,28 @@ async def unfollow_user(
     session: SessionDB,
     current_user: CurrentUser,
 ) -> ProfileResponse:
-    user = await crud_user.get_user_by_username(
+    response = await user_service.get_user_by_username(
         session=session,
         username=username,
+        current_user_id=current_user.id,
     )
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Profile not found.",
-        )
-    if user.id == current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Cannot unfollow yourself.",
-        )
-    await crud_follower.unfollow_user(
+    user_db, following = response if response else (None, False)
+    if not user_db:
+        raise ProfileNotFoundException()
+    if user_db.id == current_user.id:
+        raise ProfileUnfollowYourselfException()
+    if not following:
+        raise ProfileNotFollowedException()
+    await follower_service.unfollow_user(
         session=session,
-        follower=current_user,
-        followed=user,
+        follower_id=current_user.id,  # type: ignore[arg-type]
+        followed_id=user_db.id,  # type: ignore[arg-type]
     )
     return ProfileResponse(
         profile=ProfileData(
-            username=user.username,
-            bio=user.bio,
-            image=user.image,
+            username=user_db.username,
+            bio=user_db.bio,
+            image=user_db.image,
             following=False,
         )
     )

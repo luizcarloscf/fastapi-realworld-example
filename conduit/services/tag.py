@@ -1,12 +1,15 @@
-from typing import List
+from typing import List, Sequence
 
-from sqlmodel import select, delete
+from sqlmodel import col, delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from conduit.models import Tag, ArticleTag
+from conduit.models import ArticleTag, Tag
 
 
-async def get_all_tags(*, session: AsyncSession) -> List[str]:
+async def get_all_tags(
+    *,
+    session: AsyncSession,
+) -> Sequence[Tag]:
     result = await session.exec(
         select(Tag),
     )
@@ -14,9 +17,10 @@ async def get_all_tags(*, session: AsyncSession) -> List[str]:
 
 
 async def get_tags_by_article_id(
+    *,
     session: AsyncSession,
     article_id: int,
-) -> List[Tag]:
+) -> Sequence[Tag]:
     query = (
         select(Tag)
         .join(ArticleTag, ArticleTag.tag_id == Tag.id)
@@ -27,6 +31,7 @@ async def get_tags_by_article_id(
 
 
 async def create_tags_for_article(
+    *,
     session: AsyncSession,
     tag_names: List[str],
     article_id: int,
@@ -36,7 +41,7 @@ async def create_tags_for_article(
         return
 
     query = select(Tag).where(
-        Tag.name.in_(tag_names),
+        col(Tag.name).in_(tag_names),
     )
     result = await session.exec(query)
     existing_tags = {tag.name: tag for tag in result.all()}
@@ -59,6 +64,7 @@ async def create_tags_for_article(
 
 
 async def delete_tags_for_article(
+    *,
     session: AsyncSession,
     article_id: int,
 ) -> None:

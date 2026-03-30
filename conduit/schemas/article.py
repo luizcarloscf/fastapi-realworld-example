@@ -1,30 +1,34 @@
-from typing import List, Optional
+from typing import Annotated, List
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, WrapValidator
 from pydantic.alias_generators import to_camel
 
-
 from conduit.schemas.profile import ProfileData
-from conduit.schemas.utils import DatetimeISOFormat
+from conduit.schemas.utils import DatetimeISOFormat, check_not_none_if_set
 
 
 class ArticleRegister(BaseModel):
-    title: str = Field(..., min_length=1)
-    description: str = Field(..., min_length=1)
-    body: str = Field(..., min_length=1)
-    tag_list: Optional[List[str]] = None
+    title: Annotated[
+        str,
+        WrapValidator(check_not_none_if_set),
+    ]
+    description: Annotated[
+        str,
+        WrapValidator(check_not_none_if_set),
+    ]
+    body: Annotated[
+        str,
+        WrapValidator(check_not_none_if_set),
+    ]
+    tag_list: Annotated[
+        List[str],
+        WrapValidator(check_not_none_if_set),
+    ] = []
 
     model_config = ConfigDict(
         alias_generator=to_camel,
         populate_by_name=True,
     )
-
-    @field_validator("tag_list", mode="before")
-    @classmethod
-    def check_not_none_if_set(cls, v):
-        if v is None:
-            raise ValueError(f"Field cannot be set to null")
-        return v
 
 
 class ArticleRegisterRequest(BaseModel):
@@ -32,22 +36,27 @@ class ArticleRegisterRequest(BaseModel):
 
 
 class ArticleUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    body: Optional[str] = None
-    tag_list: Optional[List[str]] = None
+    title: Annotated[
+        str | None,
+        WrapValidator(check_not_none_if_set),
+    ] = None
+    description: Annotated[
+        str | None,
+        WrapValidator(check_not_none_if_set),
+    ] = None
+    body: Annotated[
+        str | None,
+        WrapValidator(check_not_none_if_set),
+    ] = None
+    tag_list: Annotated[
+        List[str] | None,
+        WrapValidator(check_not_none_if_set),
+    ] = None
 
     model_config = ConfigDict(
         alias_generator=to_camel,
         populate_by_name=True,
     )
-
-    @field_validator("title", "description", "body", "tag_list", mode="before")
-    @classmethod
-    def check_not_none_if_set(cls, v):
-        if v is None:
-            raise ValueError(f"Field cannot be set to null")
-        return v
 
 
 class ArticleUpdateRequest(BaseModel):

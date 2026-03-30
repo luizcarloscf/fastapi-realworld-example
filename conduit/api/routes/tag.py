@@ -1,11 +1,13 @@
-from fastapi import APIRouter
-from starlette import status
+import logging
 
-import conduit.crud.tag as crud_tags
-from conduit.api.deps import SessionDB
+from fastapi import APIRouter, status
+
+import conduit.services.tag as tag_service
+from conduit.api.dependencies import SessionDB
 from conduit.schemas.tag import TagsResponse
 
 router = APIRouter()
+log = logging.getLogger("conduit.api.tags")
 
 
 @router.get(
@@ -16,5 +18,5 @@ router = APIRouter()
     status_code=status.HTTP_200_OK,
 )
 async def get_tags(session: SessionDB) -> TagsResponse:
-    tags = await crud_tags.get_all_tags(session=session)
+    tags = await tag_service.get_all_tags(session=session)
     return TagsResponse(tags=[tag.name for tag in tags])

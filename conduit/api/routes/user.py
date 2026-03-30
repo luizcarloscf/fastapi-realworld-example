@@ -1,20 +1,24 @@
 import logging
-from typing import Annotated
 
-from fastapi import APIRouter, Body, HTTPException
-from starlette import status
+from fastapi import APIRouter, status
 
-from conduit.crud import user as user_crud
-from conduit.api.deps import CurrentUser, SessionDB, Token
-from conduit.core.security import create_access_token
-
+from conduit.api.dependencies import CurrentUser, SessionDB, SettingsDep, Token
+from conduit.exceptions import (
+    InvalidCredentialsException,
+    UserEmailExistsException,
+    UserNameExistsException,
+    UserNotFoundException,
+)
 from conduit.schemas.user import (
-    UserRegistrationRequest,
-    UserResponse,
     UserData,
     UserLoginRequest,
+    UserRegistrationRequest,
+    UserResponse,
     UserUpdateRequest,
 )
+from conduit.services import password as password_service
+from conduit.services import user as user_service
+from conduit.services.auth import create_access_token
 
 router = APIRouter()
 log = logging.getLogger("conduit.api.users")
@@ -30,21 +34,27 @@ log = logging.getLogger("conduit.api.users")
 async def add_user(
     session: SessionDB,
     user_request: UserRegistrationRequest,
+    settings: SettingsDep,
 ) -> UserResponse:
-    maybe_user = await user_crud.get_user_by_email_or_username(
+    user = user_request.user
+    maybe_user_email_db = await user_service.get_user_by_email(
         session=session,
-        email=user_request.user.email,
-        username=user_request.user.username,
+        email=user.email,
     )
-    if maybe_user:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="User with this email or username already exists.",
-        )
+    if maybe_user_email_db:
+        raise UserEmailExistsException()
 
-    db_user = await user_crud.create_user(
+    response = await user_service.get_user_by_username(
         session=session,
-        user_registration=user_request.user,
+        username=user.username,
+    )
+    maybe_user_username_db, _ = response if response else (None, False)
+    if maybe_user_username_db:
+        raise UserNameExistsException()
+
+    db_user = await user_service.create_user(
+        session=session,
+        user_registration=user,
     )
     return UserResponse(
         user=UserData(
@@ -53,7 +63,10 @@ async def add_user(
             bio=db_user.bio,
             image=db_user.image,
             token=create_access_token(
-                subject=db_user.id,
+                subject=db_user.id,  # type: ignore[arg-type]
+                expires_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
+                secret_key=settings.SECRET_KEY,
+                algorithm=settings.ALGORITHM,
             ),
         )
     )
@@ -69,17 +82,20 @@ async def add_user(
 async def login_user(
     session: SessionDB,
     user_request: UserLoginRequest,
+    settings: SettingsDep,
 ) -> UserResponse:
-    user_db = await user_crud.authenticate(
+    user = user_request.user
+    user_db = await user_service.get_user_by_email(
         session=session,
-        email=user_request.user.email,
-        password=user_request.user.password.get_secret_value(),
+        email=user.email,
     )
     if not user_db:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid password or e-mail, could not login.",
-        )
+        raise UserNotFoundException()
+    if not password_service.verify_password(
+        plain_password=user.password.get_secret_value(),
+        hashed_password=user_db.hashed_password,
+    ):
+        raise InvalidCredentialsException()
 
     return UserResponse(
         user=UserData(
@@ -87,7 +103,12 @@ async def login_user(
             email=user_db.email,
             bio=user_db.bio,
             image=user_db.image,
-            token=create_access_token(subject=user_db.id),
+            token=create_access_token(
+                subject=user_db.id,  # type: ignore[arg-type]
+                expires_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
+                secret_key=settings.SECRET_KEY,
+                algorithm=settings.ALGORITHM,
+            ),
         ),
     )
 
@@ -125,33 +146,30 @@ async def update_current_user(
     session: SessionDB,
     current_user: CurrentUser,
     token: Token,
-    user_update_request: UserUpdateRequest,
+    user_request: UserUpdateRequest,
 ) -> UserResponse:
-    if user_update_request.user.email:
-        existing_user = await user_crud.get_user_by_email(
+    user = user_request.user
+    if user.email:
+        existing_user = await user_service.get_user_by_email(
             session=session,
-            email=user_update_request.user.email,
+            email=user.email,
         )
         if existing_user and existing_user.id != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="User with this email already exists.",
-            )
+            raise UserEmailExistsException()
 
-    if user_update_request.user.username:
-        existing_user = await user_crud.get_user_by_username(
+    if user.username:
+        response = await user_service.get_user_by_username(
             session=session,
-            username=user_update_request.user.username,
+            username=user.username,
+            current_user_id=current_user.id,
         )
+        existing_user = response[0] if response else None
         if existing_user and existing_user.id != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="User with this username already exists.",
-            )
+            raise UserNameExistsException()
 
-    current_user = await user_crud.update_user(
+    current_user = await user_service.update_user(
         session=session,
-        user_update=user_update_request.user,
+        user_update=user,
         user_current=current_user,
     )
     return UserResponse(

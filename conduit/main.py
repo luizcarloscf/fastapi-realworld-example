@@ -5,8 +5,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from opentelemetry import _logs, metrics, trace
 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
-from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
+    OTLPMetricExporter,
+)
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+    OTLPSpanExporter,
+)
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
@@ -39,7 +43,9 @@ app = FastAPI(
 add_http_exception_handler(app)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_CORS_ORIGINS,
+    allow_origins=[
+        str(origin).rstrip("/") for origin in settings.ALLOWED_CORS_ORIGINS
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

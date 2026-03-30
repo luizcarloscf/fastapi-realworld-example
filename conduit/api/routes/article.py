@@ -5,11 +5,7 @@ from fastapi import APIRouter, Query, status
 import conduit.services.article as article_service
 import conduit.services.favorite as favorite_service
 import conduit.services.tag as tag_service
-from conduit.api.dependencies import (
-    CurrentOptionalUser,
-    CurrentUser,
-    SessionDB,
-)
+from conduit.api.dependencies import CurrentOptionalUser, CurrentUser, SessionDB
 from conduit.exceptions import (
     ArticleAlreadyFavoritedException,
     ArticleNotAuthorException,
@@ -79,7 +75,14 @@ async def list_articles(
                 created_at=article_db.created_at,
                 updated_at=article_db.updated_at,
             )
-            for article_db, user_db, following, favorites_count, favorited, tags_string in response
+            for (
+                article_db,
+                user_db,
+                following,
+                favorites_count,
+                favorited,
+                tags_string,
+            ) in response
         ],
         articles_count=article_count,
     )
@@ -100,13 +103,13 @@ async def feed_articles(
 ) -> ArticlesResponse:
     response = await article_service.get_articles_from_followed_authors(
         session=session,
-        current_user_id=current_user.id,
+        current_user_id=current_user.id,  # type: ignore[arg-type]
         limit=limit,
         offset=offset,
     )
-    articles_count = await article_service.count_articles_from_followed_authors(
+    count = await article_service.count_articles_from_followed_authors(
         session=session,
-        current_user_id=current_user.id,
+        current_user_id=current_user.id,  # type: ignore[arg-type]
     )
     return ArticlesResponse(
         articles=[
@@ -126,9 +129,16 @@ async def feed_articles(
                 created_at=article_db.created_at,
                 updated_at=article_db.updated_at,
             )
-            for article_db, user_db, following, favorites_count, favorited, tags_string in response
+            for (
+                article_db,
+                user_db,
+                following,
+                favorites_count,
+                favorited,
+                tags_string,
+            ) in response
         ],
-        articles_count=articles_count,
+        articles_count=count,
     )
 
 
@@ -148,12 +158,12 @@ async def create_article(
     article_db = await article_service.create_article(
         session=session,
         request=article,
-        author_id=current_user.id,
+        author_id=current_user.id,  # type: ignore[arg-type]
     )
     if article.tag_list:
         await tag_service.create_tags_for_article(
             session=session,
-            article_id=article_db.id,
+            article_id=article_db.id,  # type: ignore[arg-type]
             tag_names=article.tag_list,
         )
     return ArticleResponse(
@@ -267,12 +277,12 @@ async def update_article(
     if article.tag_list is not None:
         await tag_service.delete_tags_for_article(
             session=session,
-            article_id=article_db.id,
+            article_id=article_db.id,  # type: ignore[arg-type]
         )
         if article.tag_list:
             await tag_service.create_tags_for_article(
                 session=session,
-                article_id=article_db.id,
+                article_id=article_db.id,  # type: ignore[arg-type]
                 tag_names=article.tag_list,
             )
         tags = article.tag_list
@@ -354,8 +364,8 @@ async def favorite_article(
         raise ArticleAlreadyFavoritedException()
     await favorite_service.favorite_article(
         session=session,
-        user_id=current_user.id,
-        article_id=article_db.id,
+        user_id=current_user.id,  # type: ignore[arg-type]
+        article_id=article_db.id,  # type: ignore[arg-type]
     )
     return ArticleResponse(
         article=ArticleDataComplete(
@@ -411,8 +421,8 @@ async def unfavorite_article(
 
     await favorite_service.unfavorite_article(
         session=session,
-        user_id=current_user.id,
-        article_id=article_db.id,
+        user_id=current_user.id,  # type: ignore[arg-type]
+        article_id=article_db.id,  # type: ignore[arg-type]
     )
     favorites_count = favorites_count - 1 if favorited else favorites_count
     tags = sorted(tags_string.split(",")) if tags_string else []

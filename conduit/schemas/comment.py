@@ -1,4 +1,4 @@
-from typing import List, Annotated
+from typing import Annotated, List
 
 from pydantic import BaseModel, ConfigDict, WrapValidator
 from pydantic.alias_generators import to_camel

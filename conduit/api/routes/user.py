@@ -2,29 +2,23 @@ import logging
 
 from fastapi import APIRouter, status
 
-from conduit.services import user as user_service
-from conduit.services import password as password_service
-from conduit.api.dependencies import (
-    CurrentUser,
-    SessionDB,
-    SettingsDep,
-    Token,
-)
-from conduit.services.auth import create_access_token
-
-from conduit.schemas.user import (
-    UserRegistrationRequest,
-    UserResponse,
-    UserData,
-    UserLoginRequest,
-    UserUpdateRequest,
-)
+from conduit.api.dependencies import CurrentUser, SessionDB, SettingsDep, Token
 from conduit.exceptions import (
-    UserEmailExistsException,
     InvalidCredentialsException,
+    UserEmailExistsException,
     UserNameExistsException,
     UserNotFoundException,
 )
+from conduit.schemas.user import (
+    UserData,
+    UserLoginRequest,
+    UserRegistrationRequest,
+    UserResponse,
+    UserUpdateRequest,
+)
+from conduit.services import password as password_service
+from conduit.services import user as user_service
+from conduit.services.auth import create_access_token
 
 router = APIRouter()
 log = logging.getLogger("conduit.api.users")
@@ -43,18 +37,19 @@ async def add_user(
     settings: SettingsDep,
 ) -> UserResponse:
     user = user_request.user
-    maybe_user = await user_service.get_user_by_email(
+    maybe_user_email_db = await user_service.get_user_by_email(
         session=session,
         email=user.email,
     )
-    if maybe_user:
+    if maybe_user_email_db:
         raise UserEmailExistsException()
 
-    maybe_user = await user_service.get_user_by_username(
+    response = await user_service.get_user_by_username(
         session=session,
         username=user.username,
     )
-    if maybe_user:
+    maybe_user_username_db, _ = response if response else (None, False)
+    if maybe_user_username_db:
         raise UserNameExistsException()
 
     db_user = await user_service.create_user(
@@ -68,7 +63,7 @@ async def add_user(
             bio=db_user.bio,
             image=db_user.image,
             token=create_access_token(
-                subject=db_user.id,
+                subject=db_user.id,  # type: ignore[arg-type]
                 expires_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
                 secret_key=settings.SECRET_KEY,
                 algorithm=settings.ALGORITHM,
@@ -109,7 +104,7 @@ async def login_user(
             bio=user_db.bio,
             image=user_db.image,
             token=create_access_token(
-                subject=user_db.id,
+                subject=user_db.id,  # type: ignore[arg-type]
                 expires_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
                 secret_key=settings.SECRET_KEY,
                 algorithm=settings.ALGORITHM,

@@ -1,19 +1,20 @@
-from typing import Optional, Tuple
+from typing import Tuple
 
-
-from sqlmodel import select, exists
+from sqlmodel import exists, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from conduit.services.password import get_password_hash, verify_password
-from conduit.models import User, Follower
+from conduit.models import Follower, User
 from conduit.schemas.user import UserRegistration, UserUpdate
+from conduit.services import password as password_service
 
 
 async def get_user_by_id(
     *,
     session: AsyncSession,
-    user_id: int,
-) -> Optional[User]:
+    user_id: int | None,
+) -> User | None:
+    if user_id is None:
+        return None
     query = select(User).where(
         User.id == user_id,
     )
@@ -25,7 +26,7 @@ async def get_user_by_email(
     *,
     session: AsyncSession,
     email: str,
-) -> Optional[User]:
+) -> User | None:
     query = select(User).where(
         User.email == email,
     )
@@ -37,15 +38,14 @@ async def get_user_by_username(
     *,
     session: AsyncSession,
     username: str,
-    current_user_id: int = 0,
-) -> Optional[Tuple[User, bool]]:
+    current_user_id: int | None = None,
+) -> Tuple[User, bool] | None:
+    if current_user_id is None:
+        current_user_id = 0
     query = select(
         User,
         exists()
-        .where(
-            (Follower.follower_id == current_user_id)
-            & (Follower.following_id == User.id)
-        )
+        .where((Follower.follower_id == current_user_id) & (Follower.following_id == User.id))
         .label("following"),
     ).where(
         User.username == username,
@@ -60,7 +60,7 @@ async def create_user(
     user_registration: UserRegistration,
 ) -> User:
     user_data = user_registration.model_dump(exclude_unset=True)
-    user_data["hashed_password"] = get_password_hash(
+    user_data["hashed_password"] = password_service.get_password_hash(
         password=user_data["password"].get_secret_value(),
     )
     del user_data["password"]
@@ -79,7 +79,7 @@ async def update_user(
 ) -> User:
     user_data = user_update.model_dump(exclude_unset=True)
     if "password" in user_data:
-        user_data["hashed_password"] = get_password_hash(
+        user_data["hashed_password"] = password_service.get_password_hash(
             password=user_data["password"].get_secret_value(),
         )
         del user_data["password"]

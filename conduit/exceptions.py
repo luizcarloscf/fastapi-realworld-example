@@ -1,9 +1,11 @@
+import logging
 from typing import Dict, List
-from unittest import result
 
-from fastapi import FastAPI, Request, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
+log = logging.getLogger("conduit.api.exceptions")
 
 
 class BaseException(Exception):
@@ -62,6 +64,12 @@ class CommentNotAuthorException(BaseException):
     status_code = status.HTTP_403_FORBIDDEN
     detail = "Not authorized to delete this comment"
     errors = {"comment": ["forbidden"]}
+
+
+class CommentNotArticleException(BaseException):
+    status_code = status.HTTP_404_NOT_FOUND
+    detail = "Comment does not belong to the specified article"
+    errors = {"comment": ["not found in the specified article"]}
 
 
 class ProfileNotFoundException(BaseException):
@@ -125,6 +133,7 @@ def add_http_exception_handler(app: FastAPI) -> None:
         _: Request,
         exc: BaseException,
     ) -> JSONResponse:
+        log.error(f"BaseException: {exc.detail}", exc_info=True)
         return JSONResponse(
             status_code=exc.status_code,
             content={
@@ -140,6 +149,7 @@ def add_http_exception_handler(app: FastAPI) -> None:
         _: Request,
         exc: HTTPException,
     ) -> JSONResponse:
+        log.error(f"HTTPException: {exc.detail}", exc_info=True)
         return JSONResponse(
             status_code=exc.status_code,
             content={
@@ -161,6 +171,7 @@ def add_http_exception_handler(app: FastAPI) -> None:
             if result.get(field) is None:
                 result[field] = []
             result[field].append(message.lower().split(", ")[-1])
+        log.error("Request Validation Exception", exc_info=True)
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={
@@ -176,11 +187,12 @@ def add_http_exception_handler(app: FastAPI) -> None:
         request: Request,
         exc: Exception,
     ) -> JSONResponse:
+        log.error("Exception", exc_info=True)
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "status": "error",
                 "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "message": "An unexpected error occurred. Please try again later.",
+                "message": "An unexpected error occurred.",
             },
         )

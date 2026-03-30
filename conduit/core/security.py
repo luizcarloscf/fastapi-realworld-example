@@ -2,10 +2,8 @@ from typing import Any
 
 from fastapi.security import APIKeyHeader
 from starlette.requests import Request
-from conduit.exceptions import (
-    TokenMissingException,
-    TokenInvalidException,
-)
+
+from conduit.exceptions import TokenInvalidException, TokenMissingException
 
 
 class HTTPTokenHeader(APIKeyHeader):

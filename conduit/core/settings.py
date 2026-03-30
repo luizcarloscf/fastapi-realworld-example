@@ -6,18 +6,20 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+
+    ALLOWED_CORS_ORIGINS: List[HttpUrl]
+    DATABASE_URI: str
+    SECRET_KEY: str
+    OTLP_GRPC_ENDPOINT: HttpUrl
+    DOMAIN: str = "localhost"
+    ENVIRONMENT: Literal["local", "staging", "production"] = "local"
+    ALGORITHM: Literal["HS256"] = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
     )
-    DOMAIN: str = "localhost"
-    ENVIRONMENT: Literal["local", "staging", "production"] = "local"
-    ALLOWED_CORS_ORIGINS: List[HttpUrl]
-    DATABASE_URI: str
-    SECRET_KEY: str
-    ALGORITHM: Literal["HS256"] = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
-    OTLP_GRPC_ENDPOINT: HttpUrl
 
 
 @lru_cache()

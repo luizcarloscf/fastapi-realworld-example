@@ -2,25 +2,22 @@ import logging
 
 from fastapi import APIRouter, status
 
-import conduit.services.comment as comment_service
 import conduit.services.article as article_service
-from conduit.api.dependencies import (
-    SessionDB,
-    CurrentUser,
-    CurrentOptionalUser,
+import conduit.services.comment as comment_service
+from conduit.api.dependencies import CurrentOptionalUser, CurrentUser, SessionDB
+from conduit.exceptions import (
+    ArticleNotFoundException,
+    CommentNotArticleException,
+    CommentNotAuthorException,
+    CommentNotFoundException,
 )
 from conduit.schemas.comment import (
-    CommentRegisterRequest,
     CommentData,
+    CommentRegisterRequest,
     CommentResponse,
     CommentsResponse,
 )
 from conduit.schemas.profile import ProfileData
-from conduit.exceptions import (
-    CommentNotFoundException,
-    CommentNotAuthorException,
-    ArticleNotFoundException,
-)
 
 router = APIRouter()
 log = logging.getLogger("conduit.api.comments")
@@ -50,8 +47,8 @@ async def add_comment(
     comment_db = await comment_service.create_comment(
         session=session,
         comment_body=comment.body,
-        article_id=article.id,
-        user_id=current_user.id,
+        article_id=article.id,  # type: ignore[arg-type]
+        user_id=current_user.id,  # type: ignore[arg-type]
     )
     return CommentResponse(
         comment=CommentData(
@@ -88,7 +85,7 @@ async def get_comments(
         raise ArticleNotFoundException()
     response = await comment_service.get_comments_and_users_by_article_id(
         session=session,
-        article_id=article.id,
+        article_id=article.id,  # type: ignore[arg-type]
         current_user_id=current_user.id if current_user else None,
     )
     return CommentsResponse(
@@ -133,8 +130,10 @@ async def delete_comment(
         session=session,
         comment_id=comment_id,
     )
-    if not comment or comment.article_id != article.id:
+    if not comment:
         raise CommentNotFoundException()
+    if comment.article_id != article.id:
+        raise CommentNotArticleException()
     if comment.author_id != current_user.id:
         raise CommentNotAuthorException()
 

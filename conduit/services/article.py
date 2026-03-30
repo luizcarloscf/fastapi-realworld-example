@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from sqlmodel import exists, func, select
+from sqlmodel import col, exists, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from conduit.core.utils.slug import create_slug
@@ -23,7 +23,7 @@ async def get_article_by_slug(
 async def create_article(
     *,
     session: AsyncSession,
-    author_id: User,
+    author_id: int,
     request: ArticleRegister,
 ) -> Article:
 
@@ -85,10 +85,7 @@ async def get_article_author_tags_favorite(
             .scalar_subquery()
             .label("favorites_count"),
             exists()
-            .where(
-                (Favorite.user_id == current_user_id)
-                & (Favorite.article_id == Article.id)
-            )
+            .where((Favorite.user_id == current_user_id) & (Favorite.article_id == Article.id))
             .label("favorited"),
             func.string_agg(Tag.name, ",").label("tags"),
         )
@@ -105,12 +102,10 @@ async def get_article_author_tags_favorite(
 async def get_articles_from_followed_authors(
     *,
     session: AsyncSession,
-    current_user_id: int | None,
+    current_user_id: int,
     limit: int,
     offset: int,
 ) -> List[Tuple[Article, User, bool, int, bool, str]]:
-    if current_user_id is None:
-        current_user_id = 0
     query = (
         select(
             Article,
@@ -126,10 +121,7 @@ async def get_articles_from_followed_authors(
             .scalar_subquery()
             .label("favorites_count"),
             exists()
-            .where(
-                (Favorite.user_id == current_user_id)
-                & (Favorite.article_id == Article.id)
-            )
+            .where((Favorite.user_id == current_user_id) & (Favorite.article_id == Article.id))
             .label("favorited"),
             func.string_agg(Tag.name, ",").label("tags"),
         )
@@ -145,7 +137,7 @@ async def get_articles_from_followed_authors(
         .group_by(Article, User)
         .limit(limit)
         .offset(offset)
-        .order_by(Article.created_at.desc())
+        .order_by(col(Article.created_at).desc())
     )
     result = await session.exec(query)
     return result.all()
@@ -154,10 +146,8 @@ async def get_articles_from_followed_authors(
 async def count_articles_from_followed_authors(
     *,
     session: AsyncSession,
-    current_user_id: int | None,
+    current_user_id: int,
 ) -> int:
-    if current_user_id is None:
-        current_user_id = 0
     query = (
         select(func.count(Article.id))
         .select_from(Article)
@@ -199,10 +189,7 @@ async def get_articles_with_filters(
             .scalar_subquery()
             .label("favorites_count"),
             exists()
-            .where(
-                (Favorite.user_id == current_user_id)
-                & (Favorite.article_id == Article.id)
-            )
+            .where((Favorite.user_id == current_user_id) & (Favorite.article_id == Article.id))
             .label("favorited"),
             func.string_agg(Tag.name, ",").label("tags"),
         )
@@ -223,9 +210,7 @@ async def get_articles_with_filters(
                 & (Favorite.article_id == Article.id),
             )
         )
-    query = (
-        query.limit(limit).offset(offset).order_by(Article.created_at.desc())
-    )
+    query = query.limit(limit).offset(offset).order_by(col(Article.created_at).desc())
     result = await session.exec(query)
     return result.all()
 
@@ -243,8 +228,6 @@ async def count_articles_with_filters(
     if author:
         query = query.join(User).filter(User.username == author)
     if favorited:
-        query = (
-            query.join(Favorite).join(User).filter(User.username == favorited)
-        )
+        query = query.join(Favorite).join(User).filter(User.username == favorited)
     result = await session.exec(query)
     return int(result.one())

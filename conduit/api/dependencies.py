@@ -8,23 +8,35 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from conduit.core.database import get_db
 from conduit.core.security import HTTPTokenHeader
 from conduit.core.settings import Settings, get_settings_cached
-from conduit.schemas.token import TokenPayload
-from conduit.services import user as user_service
-from conduit.models import User
 from conduit.exceptions import (
-    UserNotFoundException,
     InvalidCredentialsException,
     TokenExpiredException,
     TokenInvalidException,
+    UserNotFoundException,
 )
+from conduit.models import User
+from conduit.schemas.token import TokenPayload
+from conduit.services import user as user_service
 
 bearer = HTTPTokenHeader(raise_error=True, name="Authorization")
 bearer_optional = HTTPTokenHeader(raise_error=False, name="Authorization")
 
-Token = Annotated[str, Depends(bearer)]
-TokenOptional = Annotated[str | None, Depends(bearer_optional)]
-SettingsDep = Annotated[Settings, Depends(get_settings_cached)]
-SessionDB = Annotated[AsyncSession, Depends(get_db)]
+Token = Annotated[
+    str,
+    Depends(bearer),
+]
+TokenOptional = Annotated[
+    str | None,
+    Depends(bearer_optional),
+]
+SettingsDep = Annotated[
+    Settings,
+    Depends(get_settings_cached),
+]
+SessionDB = Annotated[
+    AsyncSession,
+    Depends(get_db),
+]
 
 
 async def get_current_user(
@@ -77,5 +89,11 @@ async def get_current_user_optional(
     return user_db
 
 
-CurrentUser = Annotated[User, Depends(get_current_user)]
-CurrentOptionalUser = Annotated[User | None, Depends(get_current_user_optional)]
+CurrentUser = Annotated[
+    User,
+    Depends(get_current_user),
+]
+CurrentOptionalUser = Annotated[
+    User | None,
+    Depends(get_current_user_optional),
+]

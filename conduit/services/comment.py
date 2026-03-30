@@ -1,9 +1,9 @@
-from typing import Optional, List, Tuple
+from typing import List, Optional, Tuple
 
-from sqlmodel import select, delete, exists
+from sqlmodel import delete, exists, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from conduit.models import Comment, User, Follower
+from conduit.models import Comment, Follower, User
 
 
 async def create_comment(
@@ -28,7 +28,7 @@ async def get_comments_and_users_by_article_id(
     *,
     session: AsyncSession,
     article_id: int,
-    current_user_id: int,
+    current_user_id: int | None = None,
 ) -> List[Tuple[Comment, User, bool]]:
     if current_user_id is None:
         current_user_id = 0

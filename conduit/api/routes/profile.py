@@ -4,19 +4,15 @@ from fastapi import APIRouter, status
 
 import conduit.services.follower as follower_service
 import conduit.services.user as user_service
-from conduit.api.dependencies import (
-    CurrentOptionalUser,
-    CurrentUser,
-    SessionDB,
-)
-from conduit.schemas.profile import ProfileData, ProfileResponse
+from conduit.api.dependencies import CurrentOptionalUser, CurrentUser, SessionDB
 from conduit.exceptions import (
-    ProfileNotFollowedException,
-    ProfileNotFoundException,
     ProfileAlreadyFollowedException,
     ProfileFollowYourselfException,
+    ProfileNotFollowedException,
+    ProfileNotFoundException,
     ProfileUnfollowYourselfException,
 )
+from conduit.schemas.profile import ProfileData, ProfileResponse
 
 router = APIRouter()
 log = logging.getLogger("conduit.api.profiles")
@@ -39,14 +35,14 @@ async def get_profile(
         username=username,
         current_user_id=current_user.id if current_user else None,
     )
-    user, following = response if response else (None, False)
-    if not user:
+    user_db, following = response if response else (None, False)
+    if not user_db:
         raise ProfileNotFoundException()
     return ProfileResponse(
         profile=ProfileData(
-            username=user.username,
-            bio=user.bio,
-            image=user.image,
+            username=user_db.username,
+            bio=user_db.bio,
+            image=user_db.image,
             following=following,
         )
     )
@@ -69,23 +65,23 @@ async def follow_user(
         username=username,
         current_user_id=current_user.id,
     )
-    user, following = response if response else (None, False)
-    if not user:
+    user_db, following = response if response else (None, False)
+    if not user_db:
         raise ProfileNotFoundException()
-    if user.id == current_user.id:
+    if user_db.id == current_user.id:
         raise ProfileFollowYourselfException()
     if following:
         raise ProfileAlreadyFollowedException()
     await follower_service.follow_user(
         session=session,
-        follower_id=current_user.id,
-        followed_id=user.id,
+        follower_id=current_user.id,  # type: ignore[arg-type]
+        followed_id=user_db.id,  # type: ignore[arg-type]
     )
     return ProfileResponse(
         profile=ProfileData(
-            username=user.username,
-            bio=user.bio,
-            image=user.image,
+            username=user_db.username,
+            bio=user_db.bio,
+            image=user_db.image,
             following=True,
         )
     )
@@ -108,23 +104,23 @@ async def unfollow_user(
         username=username,
         current_user_id=current_user.id,
     )
-    user, following = response if response else (None, False)
-    if not user:
+    user_db, following = response if response else (None, False)
+    if not user_db:
         raise ProfileNotFoundException()
-    if user.id == current_user.id:
+    if user_db.id == current_user.id:
         raise ProfileUnfollowYourselfException()
     if not following:
         raise ProfileNotFollowedException()
     await follower_service.unfollow_user(
         session=session,
-        follower_id=current_user.id,
-        followed_id=user.id,
+        follower_id=current_user.id,  # type: ignore[arg-type]
+        followed_id=user_db.id,  # type: ignore[arg-type]
     )
     return ProfileResponse(
         profile=ProfileData(
-            username=user.username,
-            bio=user.bio,
-            image=user.image,
+            username=user_db.username,
+            bio=user_db.bio,
+            image=user_db.image,
             following=False,
         )
     )

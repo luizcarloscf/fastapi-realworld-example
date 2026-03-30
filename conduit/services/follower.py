@@ -1,5 +1,6 @@
 from sqlmodel import delete
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 from conduit.models import Follower
 
 
@@ -25,8 +26,7 @@ async def unfollow_user(
     followed_id: int,
 ) -> None:
     query = delete(Follower).where(
-        (Follower.follower_id == follower_id)
-        & (Follower.following_id == followed_id),
+        (Follower.follower_id == follower_id) & (Follower.following_id == followed_id),
     )
     await session.exec(query)
     await session.commit()

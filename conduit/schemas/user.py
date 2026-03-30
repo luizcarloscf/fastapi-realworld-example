@@ -1,15 +1,8 @@
 from typing import Annotated
-from pydantic import (
-    BaseModel,
-    EmailStr,
-    SecretStr,
-    WrapValidator,
-)
 
-from conduit.schemas.utils import (
-    check_not_none_if_set,
-    normalize_to_none,
-)
+from pydantic import BaseModel, EmailStr, SecretStr, WrapValidator
+
+from conduit.schemas.utils import check_not_none_if_set, normalize_to_none
 
 
 class UserData(BaseModel):

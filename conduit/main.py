@@ -5,12 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from opentelemetry import _logs, metrics, trace
 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
-from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
-    OTLPMetricExporter,
-)
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
-    OTLPSpanExporter,
-)
+from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
@@ -43,9 +39,7 @@ app = FastAPI(
 add_http_exception_handler(app)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        str(origin).rstrip("/") for origin in settings.ALLOWED_CORS_ORIGINS
-    ],
+    allow_origins=[str(origin).rstrip("/") for origin in settings.allowed_cors_origins],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -69,7 +63,7 @@ tracer_provider = TracerProvider(resource=resource)
 tracer_provider.add_span_processor(
     span_processor=BatchSpanProcessor(
         span_exporter=OTLPSpanExporter(
-            endpoint=str(settings.OTLP_GRPC_ENDPOINT),
+            endpoint=str(settings.otlp_grpc_endpoint),
             insecure=True,
         ),
     ),
@@ -81,7 +75,7 @@ meter_provider = MeterProvider(
     metric_readers=[
         PeriodicExportingMetricReader(
             exporter=OTLPMetricExporter(
-                endpoint=str(settings.OTLP_GRPC_ENDPOINT),
+                endpoint=str(settings.otlp_grpc_endpoint),
                 insecure=True,
             ),
         ),
@@ -93,7 +87,7 @@ logger_provider = LoggerProvider(resource=resource)
 logger_provider.add_log_record_processor(
     BatchLogRecordProcessor(
         exporter=OTLPLogExporter(
-            endpoint=str(settings.OTLP_GRPC_ENDPOINT),
+            endpoint=str(settings.otlp_grpc_endpoint),
             insecure=True,
         )
     )

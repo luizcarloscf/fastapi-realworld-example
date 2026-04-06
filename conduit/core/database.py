@@ -9,7 +9,7 @@ from conduit.core.settings import get_settings_cached
 SETTINGS = get_settings_cached()
 
 ENGINE = create_async_engine(
-    url=str(SETTINGS.DATABASE_URI),
+    url=SETTINGS.database_uri,
     pool_size=10,
     max_overflow=20,
     pool_recycle=300,

@@ -64,9 +64,9 @@ async def add_user(
             image=db_user.image,
             token=create_access_token(
                 subject=db_user.id,  # type: ignore[arg-type]
-                expires_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
-                secret_key=settings.SECRET_KEY,
-                algorithm=settings.ALGORITHM,
+                expires_minutes=settings.access_token_expire_minutes,
+                secret_key=settings.secret_key,
+                algorithm=settings.algorithm,
             ),
         )
     )
@@ -105,9 +105,9 @@ async def login_user(
             image=user_db.image,
             token=create_access_token(
                 subject=user_db.id,  # type: ignore[arg-type]
-                expires_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
-                secret_key=settings.SECRET_KEY,
-                algorithm=settings.ALGORITHM,
+                expires_minutes=settings.access_token_expire_minutes,
+                secret_key=settings.secret_key,
+                algorithm=settings.algorithm,
             ),
         ),
     )

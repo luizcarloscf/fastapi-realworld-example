@@ -47,8 +47,8 @@ async def get_current_user(
     try:
         payload = jwt.decode(
             token=token,
-            key=settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM],
+            key=settings.secret_key,
+            algorithms=[settings.algorithm],
         )
         token_data = TokenPayload(**payload)
     except JWTError as ex:
@@ -76,8 +76,8 @@ async def get_current_user_optional(
     try:
         payload = jwt.decode(
             token=token,
-            key=settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM],
+            key=settings.secret_key,
+            algorithms=[settings.algorithm],
         )
         token_data = TokenPayload(**payload)
     except (JWTError, ExpiredSignatureError, ValidationError):

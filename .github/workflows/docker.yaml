@@ -17,13 +17,13 @@ jobs:
       matrix:
         include:
           - variant: backend
-            dockerfile: etc/docker/backend/Dockerfile
+            dockerfile: etc/docker/Dockerfile
           - variant: backend-multistage
-            dockerfile: etc/docker/backend/Dockerfile.multistage
+            dockerfile: etc/docker/Dockerfile.multistage
           - variant: backend-distroless
-            dockerfile: etc/docker/backend/Dockerfile.distroless
+            dockerfile: etc/docker/Dockerfile.distroless
           - variant: backend-chainguard
-            dockerfile: etc/docker/backend/Dockerfile.chainguard
+            dockerfile: etc/docker/Dockerfile.chainguard
     steps:
       - name: Checkout
         uses: actions/checkout@v4

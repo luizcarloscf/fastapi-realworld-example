@@ -1,17 +1,24 @@
+networks:
+  conduit-network:
+    driver: bridge
+
 services:
-  conduit-backend:
+  backend:
+    image: luizcarloscf/conduit-backend:v0.1.0-standard
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: conduit-backend
+      dockerfile: ./etc/docker/backend/Dockerfile.standard
+    container_name: backend
     restart: always
+    env_file:
+      - .env
     environment:
-      ALLOWED_CORS_ORIGINS: '["http://localhost:3000"]'
-      DATABASE_URI: postgresql+psycopg_async://root:root@postgres:5432/test
-      SECRET_KEY: super-secret-key
+      DATABASE_HOST: postgres
       OTLP_GRPC_ENDPOINT: http://otel-collector:4317
     ports:
       - "8000:8000"
+    networks:
+      - conduit-network
     depends_on:
       - postgres
       - otel-collector
@@ -19,23 +26,16 @@ services:
     image: postgres
     container_name: postgres
     restart: always
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: root
-      POSTGRES_DB: test
+      POSTGRES_DB: ${DATABASE_NAME:?DATABASE_NAME is required}
+      POSTGRES_USER: ${DATABASE_USER:?DATABASE_USER is required}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD is required}
     ports:
       - "5432:5432"
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: pgadmin
-    restart: always
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: root
-    ports:
-      - "5050:80"
-    depends_on:
-      - postgres
+    networks:
+      - conduit-network
   jaeger:
     image: jaegertracing/all-in-one:1.55
     container_name: jaeger
@@ -46,12 +46,6 @@ services:
       - "--prometheus.query.normalize-calls=true"
       - "--prometheus.query.normalize-duration=true"
     ports:
-      - "9411"          # http-zipkin
-      - "14250"         # grpc-http
-      - "14267"         # c-tchan-trft
-      - "14268"         # http-c-binary-trft
-      - "4317"          # otlp-grpc
-      - "4318"          # otlp-http
       - "16686:16686"   # http-query
       - "16685:16685"   # grpc-query
     environment:
@@ -59,7 +53,8 @@ services:
       - SPAN_STORAGE_TYPE=memory
       - COLLECTOR_ZIPKIN_HOST_PORT=:9411
       - JAEGER_DISABLED=false
-      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - conduit-network
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     container_name: otel-collector
@@ -71,6 +66,8 @@ services:
       - "13133:13133" # health_check extension
       - "4317:4317"   # OTLP gRPC receiver
       - "4318:4318"   # OTLP http receiver
+    networks:
+      - conduit-network
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -83,6 +80,8 @@ services:
       - ./etc/shared/prometheus.yml:/etc/prometheus.yml
     ports:
       - "9090:9090"
+    networks:
+      - conduit-network
   opensearch:
     image: opensearchproject/opensearch:2.12.0
     container_name: opensearch
@@ -96,16 +95,20 @@ services:
       - DISABLE_SECURITY_PLUGIN=true
     ports:
       - "9200:9200"
+    networks:
+      - conduit-network
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
     volumes:
       - ./etc/shared/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
     environment:
-      - GF_AUTH_ANONYMOUS_ENABLED=true  
+      - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
       - GF_AUTH_DISABLE_LOGIN_FORM=true
       - GF_INSTALL_PLUGINS=grafana-opensearch-datasource
       - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor traceQLStreaming metricsSummary
     ports:
       - "3000:3000"
+    networks:
+      - conduit-network

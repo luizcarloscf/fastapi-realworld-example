@@ -1,0 +1,38 @@
+FROM debian:13-slim AS builder
+
+ENV LANG=C.UTF-8 \
+    PYTHONDONTWRITEBYTECODE=1 \
+	PYTHONUNBUFFERED=1 \
+	POETRY_NO_INTERACTION=1 \
+	POETRY_VIRTUALENVS_CREATE=1 \
+	POETRY_VIRTUALENVS_IN_PROJECT=1 \
+    POETRY_CACHE_DIR=/tmp/poetry_cache \
+    PATH="/root/.venv/bin:$PATH"
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends python3.13 python3-pip python3-venv gcc libpq-dev
+
+COPY pyproject.toml poetry.lock README.md ./
+COPY conduit ./conduit
+
+RUN python3 -m venv /root/.venv && \
+    python3 -m pip install poetry && \
+    python3 -m poetry self add poetry-plugin-bundle && \
+    python3 -m poetry bundle venv /app/.venv
+
+FROM gcr.io/distroless/python3-debian13:nonroot AS runtime
+
+ENV PYTHONUNBUFFERED=1 \
+	PATH="/app/.venv/bin:$PATH"
+
+WORKDIR /app
+
+COPY --from=builder /app/.venv /app/.venv
+
+EXPOSE 8000
+
+ENTRYPOINT ["/app/.venv/bin/uvicorn"]
+
+CMD ["conduit.main:app", "--host", "0.0.0.0", "--port", "8000"]

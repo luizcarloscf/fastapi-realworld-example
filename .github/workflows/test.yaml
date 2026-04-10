@@ -29,15 +29,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-      jaeger:
-        image: jaegertracing/all-in-one:1.55
-        ports:
-          - 4317:4317
-        options: >-
-          --health-cmd "/go/bin/all-in-one-linux version"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - name: Checkout
         uses: actions/checkout@v6

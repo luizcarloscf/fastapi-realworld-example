@@ -58,4 +58,4 @@ jobs:
           file: ${{ matrix.dockerfile }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/fastapi-realworld-example:${{ steps.vars.outputs.TAG }}-${{ matrix.variant }}
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/fastapi-realworld-example:${{ matrix.variant }}-${{ steps.vars.outputs.TAG }}

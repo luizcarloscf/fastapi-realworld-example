@@ -8,21 +8,15 @@ on:
 
 jobs:
   style:
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
-      fail-fast: false
-      max-parallel: 1
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v6
 
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python
       uses: actions/setup-python@v6
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: 3.14
 
     - name: Install Poetry
       uses: snok/install-poetry@v1

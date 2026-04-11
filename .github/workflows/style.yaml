@@ -39,4 +39,4 @@ jobs:
 
     - name: Check types with mypy
       run: |
-        poetry run mypy conduit tests
+        poetry run mypy --install-types --non-interactive conduit tests

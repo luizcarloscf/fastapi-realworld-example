@@ -35,8 +35,8 @@ jobs:
 
     - name: isort check
       run: |
-        poetry run isort --check-only conduit tests
+        poetry run isort --check-only conduit tests alembic
 
     - name: Check types with mypy
       run: |
-        poetry run mypy --install-types --non-interactive conduit tests
+        poetry run mypy --install-types --non-interactive conduit tests alembic

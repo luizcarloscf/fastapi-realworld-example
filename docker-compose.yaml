@@ -4,10 +4,10 @@ networks:
 
 services:
   backend:
-    image: luizcarloscf/conduit-backend:v0.1.0-standard
+    image: luizcarloscf/conduit-backend:v0.1.0
     build:
       context: .
-      dockerfile: ./etc/docker/backend/Dockerfile.standard
+      dockerfile: ./etc/docker/Dockerfile
     container_name: backend
     restart: always
     env_file:

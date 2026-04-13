@@ -4,6 +4,18 @@
 
 This codebase was created to demonstrate a fully fledged backend application built with [**FastAPI**] including CRUD operations, authentication, routing, pagination, and more.
 
+## Badges
+
+[![Version](https://img.shields.io/github/v/tag/luizcarloscf/fastapi-realworld-example?logo=github)](https://github.com/luizcarloscf/fastapi-realworld-example/releases)
+[![Python](https://img.shields.io/badge/python-3.10|3.11|3.12|3.13|3.14-blue?logo=python?logo=python&logoColor=white)](https://www.python.org/)
+[![Codecov](https://codecov.io/gh/luizcarloscf/fastapi-realworld-example/branch/master/graph/badge.svg)](https://codecov.io/gh/luizcarloscf/fastapi-realworld-example)
+[![Docker Build](https://img.shields.io/github/actions/workflow/status/luizcarloscf/fastapi-realworld-example/docker.yaml?branch=master&label=docker%20build&logo=githubactions)](https://github.com/luizcarloscf/fastapi-realworld-example/actions/workflows/docker.yaml)
+[![Docker Hub](https://img.shields.io/docker/pulls/luizcarloscf/fastapi-realworld-example?logo=docker&label=dockerhub%20pulls)](https://hub.docker.com/r/luizcarloscf/fastapi-realworld-example)
+[![backend-latest](https://img.shields.io/docker/image-size/luizcarloscf/fastapi-realworld-example/backend-latest?logo=docker&label=backend-latest)](https://hub.docker.com/r/luizcarloscf/fastapi-realworld-example/tags)
+[![backend-multistage-latest](https://img.shields.io/docker/image-size/luizcarloscf/fastapi-realworld-example/backend-multistage-latest?logo=docker&label=backend-multistage-latest)](https://hub.docker.com/r/luizcarloscf/fastapi-realworld-example/tags)
+[![backend-distroless-latest](https://img.shields.io/docker/image-size/luizcarloscf/fastapi-realworld-example/backend-distroless-latest?logo=docker&label=backend-distroless-latest)](https://hub.docker.com/r/luizcarloscf/fastapi-realworld-example/tags)
+[![backend-chainguard-latest](https://img.shields.io/docker/image-size/luizcarloscf/fastapi-realworld-example/backend-chainguard-latest?logo=docker&label=backend-chainguard-latest)](https://hub.docker.com/r/luizcarloscf/fastapi-realworld-example/tags)
+
 ## Description
 
 This project is a Python-based API that uses [**PostgreSQL**] as its database. It is built with [**FastAPI**], a modern, fast (high-performance), web framework for building APIs with Python 3 based on standard Python type hints. The application is fully containerized using [**Docker**], ensuring consistency across development and deployment environments. Additionally, the project integrates [**GitHub Actions**] to automate code style checks, testing, and the building and publishing of Docker images to Docker Hub.

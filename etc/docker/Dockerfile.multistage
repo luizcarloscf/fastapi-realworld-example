@@ -1,0 +1,34 @@
+FROM python:3.14-slim AS builder
+
+ENV LANG=C.UTF-8 \
+	PYTHONDONTWRITEBYTECODE=1 \
+	PYTHONUNBUFFERED=1 \
+	POETRY_NO_INTERACTION=1 \
+	POETRY_VIRTUALENVS_CREATE=1 \
+	POETRY_VIRTUALENVS_IN_PROJECT=1 \
+	POETRY_CACHE_DIR=/tmp/poetry_cache
+
+WORKDIR /app
+
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends gcc libpq-dev
+
+COPY pyproject.toml poetry.lock README.md ./
+COPY conduit ./conduit
+
+RUN python3 -m pip install poetry && \
+    python3 -m poetry self add poetry-plugin-bundle && \
+    python3 -m poetry bundle venv /app/.venv
+
+FROM python:3.14-slim AS runtime
+
+ENV PYTHONUNBUFFERED=1 \
+	PATH="/app/.venv/bin:$PATH"
+
+WORKDIR /app
+
+COPY --from=builder /app/.venv /app/.venv
+
+EXPOSE 8000
+
+CMD ["uvicorn", "conduit.main:app", "--host", "0.0.0.0", "--port", "8000"]

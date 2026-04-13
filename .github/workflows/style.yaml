@@ -1,0 +1,42 @@
+name: Style Check
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+  pull_request:
+
+jobs:
+  style:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: 3.14
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Install dependencies
+      run: |
+        poetry install --with dev
+
+    - name: Lint with flake8
+      run: |
+        poetry run flake8 conduit tests
+
+    - name: isort check
+      run: |
+        poetry run isort --check-only conduit tests alembic
+
+    - name: Check types with mypy
+      run: |
+        poetry run mypy --install-types --non-interactive conduit tests alembic

@@ -1,0 +1,42 @@
+FROM cgr.dev/chainguard/wolfi-base AS builder
+ARG VERSION=3.14
+
+ENV LANG=C.UTF-8 \
+    PYTHONDONTWRITEBYTECODE=1 \
+	PYTHONUNBUFFERED=1 \
+	POETRY_NO_INTERACTION=1 \
+	POETRY_VIRTUALENVS_CREATE=1 \
+	POETRY_VIRTUALENVS_IN_PROJECT=1 \
+    POETRY_CACHE_DIR=/tmp/poetry_cache
+
+WORKDIR /app
+
+RUN apk update && \
+    apk add --no-cache build-base libpq-18 python-${VERSION} py${VERSION}-pip && \
+    chown -R nonroot:nonroot /app/
+
+USER nonroot
+
+COPY pyproject.toml poetry.lock README.md ./
+COPY conduit ./conduit
+
+RUN python -m pip install --no-cache-dir poetry && \
+    python -m poetry self add poetry-plugin-bundle && \
+    python -m poetry bundle venv /app/.venv
+
+FROM cgr.dev/chainguard/python:latest AS runtime
+
+ENV PYTHONUNBUFFERED=1 \
+    PATH="/app/.venv/bin:$PATH"
+
+WORKDIR /app
+
+COPY --from=builder /app/.venv /app/.venv
+
+USER nonroot
+
+EXPOSE 8000
+
+ENTRYPOINT ["/app/.venv/bin/python"]
+
+CMD ["-m", "uvicorn", "conduit.main:app", "--host", "0.0.0.0", "--port", "8000"]

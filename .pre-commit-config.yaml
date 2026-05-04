@@ -34,7 +34,7 @@ repos:
     -   id: mypy
         additional_dependencies:
         -   pydantic==2.12.5
-        -   sqlmodel==0.0.37
+        -   sqlmodel==0.0.38
 
 -   repo: https://github.com/PyCQA/flake8
     rev: 7.3.0
